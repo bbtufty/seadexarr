@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import time
+from xml.etree import ElementTree
 from datetime import datetime
 from urllib.request import urlretrieve
 
@@ -10,11 +11,12 @@ import requests
 from arrapi import SonarrAPI
 from seadex import SeaDexEntry, EntryNotFoundError
 
-from .anilist import get_anilist_title, get_anilist_n_eps, get_anilist_thumb
+from .anilist import get_anilist_title, get_anilist_n_eps, get_anilist_thumb, get_anilist_format
 from .discord import discord_push
 from .log import setup_logger, centred_string, left_aligned_string
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
+ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
 
 
 def get_tvdb_id(mapping):
@@ -57,8 +59,9 @@ class SeaDexSonarr:
                  prefer_dual_audio=True,
                  want_best=True,
                  anime_mappings=None,
-                 sleep_time=0,
-                 anime_id_cache_time=1,
+                 anidb_mappings=None,
+                 sleep_time=2,
+                 cache_time=1,
                  log_level="INFO",
                  ):
         """Sync Sonarr instance with SeaDex
@@ -75,20 +78,26 @@ class SeaDexSonarr:
             anime_mappings (dict): Custom mappings between TVDB/AniList.
                 Defaults to None, which will use the default mappings
                 from Kometa (https://github.com/Kometa-Team/Anime-IDs)
+            anidb_mappings (dict): Custom mappings between TVDB/AniDB.
+                Defaults to None, which will use the default mappings
+                from https://github.com/Anime-Lists/anime-lists/
             sleep_time (float): Time to wait, in seconds, between requests, to avoid
                 hitting API rate limits. Defaults to 0 seconds (no sleep).
-            anime_id_cache_time (float): Cache time for the Kometa anime ID file.
+            cache_time (float): Cache time for files that provide mappings.
                 Defaults to 1 day
             log_level (str): Logging level. Defaults to INFO.
         """
 
-        self.anime_id_cache_time = anime_id_cache_time
+        self.cache_time = cache_time
 
-        # Get the anime mappings file
+        # Get the mappings files
         if anime_mappings is None:
             anime_mappings = self.get_anime_mappings()
+        if anidb_mappings is None:
+            anidb_mappings = self.get_anidb_mappings()
 
         self.anime_mappings = anime_mappings
+        self.anidb_mappings = anidb_mappings
 
         # Instantiate the SeaDex API
         self.seadex = SeaDexEntry()
@@ -181,7 +190,7 @@ class SeaDexSonarr:
                 )
                 continue
 
-            for mapping_idx, mapping in al_mappings.items():
+            for anidb_id, mapping in al_mappings.items():
 
                 # Map the TVDB ID through to AniList
                 al_id = mapping.get("anilist_id", None)
@@ -234,6 +243,7 @@ class SeaDexSonarr:
 
                 # Get the episode list for all relevant episodes
                 ep_list = self.get_ep_list(sonarr_series_id=sonarr_series_id,
+                                           anidb_id=anidb_id,
                                            mapping=mapping,
                                            )
 
@@ -363,13 +373,38 @@ class SeaDexSonarr:
         t_diff = now_datetime - anime_datetime
 
         # If the file is older than the cache time, re-download
-        if t_diff.days >= self.anime_id_cache_time:
+        if t_diff.days >= self.cache_time:
             urlretrieve(ANIME_IDS_URL, anime_mappings_file)
 
         with open(anime_mappings_file, "r") as f:
             anime_mappings = json.load(f)
 
         return anime_mappings
+
+    def get_anidb_mappings(self):
+        """Get the AniDB mappings file"""
+
+        anidb_mappings_file = os.path.join("anime-list-master.xml")
+
+        # If file doesn't exist, get it
+        if not os.path.exists(anidb_mappings_file):
+            urlretrieve(ANIDB_MAPPINGS_URL, anidb_mappings_file)
+
+        # Check if this is older than
+        anime_mtime = os.path.getmtime(anidb_mappings_file)
+        anime_datetime = datetime.fromtimestamp(anime_mtime)
+        now_datetime = datetime.now()
+
+        # Get the time difference
+        t_diff = now_datetime - anime_datetime
+
+        # If the file is older than the cache time, re-download
+        if t_diff.days >= self.cache_time:
+            urlretrieve(ANIME_IDS_URL, anidb_mappings_file)
+
+        anidb_mappings = ElementTree.parse(anidb_mappings_file).getroot()
+
+        return anidb_mappings
 
     def get_all_sonarr_series(self):
         """Get all series in Sonarr tagged as anime"""
@@ -431,13 +466,15 @@ class SeaDexSonarr:
 
     def get_ep_list(self,
                     sonarr_series_id,
+                    anidb_id,
                     mapping,
                     ):
         """Get list of relevant episodes for an AniList mapping
 
         Args:
             sonarr_series_id (int): Series ID in Sonarr
-            mapping (dict): Mappings between TVDB and AniList
+            anidb_id (int): AniDB ID
+            mapping (dict): Mapping dictionary between TVDB and AniList
         """
 
         # If we have any season info, pull that out now
@@ -485,17 +522,64 @@ class SeaDexSonarr:
             if include_episode:
                 final_ep_list.append(ep)
 
+        # For OVAs and movies, the offsets can often be wrong, so if we have weird mappings
+        # then take that into account here
+        al_format, self.al_cache = get_anilist_format(al_id,
+                                                      al_cache=self.al_cache,
+                                                      )
+
         # Slice the list to get the correct episodes, so any potential offsets
         ep_offset = mapping.get("tvdb_epoffset", 0)
         n_eps, self.al_cache = get_anilist_n_eps(al_id,
                                                  al_cache=self.al_cache,
                                                  )
 
-        # If we don't get a number of episodes, use them all
-        if n_eps is None:
-            n_eps = len(final_ep_list) - ep_offset
+        # Potentially pull out a bunch of mappings from AniDB. These should
+        # be for anything not marked as TV
+        anidb_mapping_dict = {}
+        if al_format not in ["TV"]:
+            anidb_item = self.anidb_mappings.findall(f"anime[@anidbid='{anidb_id}']")
 
-        final_ep_list = final_ep_list[ep_offset:n_eps + ep_offset]
+            # If we don't find anything, no worries. If we find multiple, worries
+            if len(anidb_item) > 1:
+                raise ValueError("Multiple AniDB mappings found. This should not happen!")
+
+            if len(anidb_item) == 1:
+                anidb_item = anidb_item[0]
+                anidb_mapping_list = anidb_item.findall("mapping-list")
+                if len(anidb_mapping_list) > 0:
+                    for ms in anidb_mapping_list:
+                        m = ms.findall("mapping")
+                        for i in m:
+                            # Split at semicolons
+                            i_split = i.text.strip(";").split(";")
+                            i_split = [x.split("-") for x in i_split]
+
+                            # Only match things if AniList and AniDB agree on the TVDB season
+                            anidb_tvdbseason = int(i.attrib["tvdbseason"])
+                            if not anidb_tvdbseason == tvdb_season:
+                                continue
+
+                            anidb_mapping_dict[anidb_tvdbseason] = {int(x[1]): int(x[0]) for x in i_split}
+
+        # Prefer the AniDB mapping dict over any offsets
+        if len(anidb_mapping_dict) > 0:
+            anidb_final_ep_list = []
+
+            # See if we have the mapping for each entry
+            for ep in final_ep_list:
+                anidb_mapping_dict_entry = anidb_mapping_dict.get(ep["seasonNumber"], {}).get(ep["episodeNumber"], None)
+                if anidb_mapping_dict_entry is not None:
+                    anidb_final_ep_list.append(ep)
+
+            final_ep_list = copy.deepcopy(anidb_final_ep_list)
+
+        else:
+            # If we don't get a number of episodes, use them all
+            if n_eps is None:
+                n_eps = len(final_ep_list) - ep_offset
+
+            final_ep_list = final_ep_list[ep_offset:n_eps + ep_offset]
 
         return final_ep_list
 
