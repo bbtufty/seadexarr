@@ -74,3 +74,8 @@ are:
   tagged as dual audio, if any exist
 - `want_best` (defaults to True), will prefer results tagged
   as best, if any exist
+
+## Roadmap
+
+- Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
+  more robust mapping between AniDB entries and AniList entries
