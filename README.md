@@ -9,9 +9,10 @@
 
 SeaDex-Sonarr is designed as a tool to ensure that you have Anime releases on Sonarr that match with the best releases
 tagged on SeaDex. It works by scanning through series tagged as type "Anime" on Sonarr, matching these up via the TVDB
-ID to AniList mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), and then linking 
-these through to SeaDex. It then returns a list of links to download, which can also optionally be pushed through
-via a Discord bot. This should make it significantly more hands-free to keep the best Anime releases out there.
+ID to AniList mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs) and AniDB mappings
+(https://github.com/Anime-Lists/anime-lists), and then linking these through to SeaDex. It then returns a list of 
+links to download, which can also optionally be pushed through  via a Discord bot. This should make it significantly 
+more hands-free to keep the best Anime releases out there.
 
 ## Installation
 
