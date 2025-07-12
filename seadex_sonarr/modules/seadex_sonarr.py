@@ -258,6 +258,19 @@ class SeaDexSonarr:
                 # Produce a dictionary of info from the SeaDex request
                 seadex_dict = self.get_seadex_dict(sd_entry=sd_entry)
 
+                if len(seadex_dict) == 0:
+                    self.logger.info(
+                        centred_string(f"No suitable releases found on SeaDex",
+                                       total_length=self.log_line_length,
+                                       )
+                    )
+                    self.logger.info(
+                        centred_string("-" * self.log_line_length,
+                                       total_length=self.log_line_length,
+                                       )
+                    )
+                    continue
+
                 self.logger.debug(
                     centred_string(f"SeaDex: {', '.join(seadex_dict)}",
                                    total_length=self.log_line_length,
