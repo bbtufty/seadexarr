@@ -79,3 +79,4 @@ are:
 
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
+- Add a way to automatically add suggested releases to torrent client

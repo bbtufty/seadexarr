@@ -7,6 +7,7 @@ def discord_push(
     url,
     sonarr_title,
     al_title,
+    seadex_url,
     fields,
     thumb_url,
 ):
@@ -16,6 +17,7 @@ def discord_push(
         url (str): URL to post to
         sonarr_title (str): Title as in Sonarr
         al_title (str): Title as in AniList
+        seadex_url (str): URL to SeaDex page
         fields (list): List of dicts containing links
             for the fields
         thumb_url (str): URL for thumbnail
@@ -30,6 +32,7 @@ def discord_push(
                     "url": "https://github.com/bbtufty/seadex-sonarr",
                 },
                 "title": al_title,
+                "description": seadex_url,
                 "fields": fields,
                 "thumbnail": {"url": thumb_url},
             }

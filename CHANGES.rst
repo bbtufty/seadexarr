@@ -1,6 +1,7 @@
 0.0.2 (Unreleased)
 ==================
 
+- Improved Discord messaging
 - Catch the case where we don't find any suitable SeaDex releases
 - Include potentially weird offset mappings via AniDB lists
 - Add a rest time to not hit AniList rate limiting

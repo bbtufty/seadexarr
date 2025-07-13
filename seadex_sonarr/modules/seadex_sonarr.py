@@ -223,6 +223,7 @@ class SeaDexSonarr:
                     )
                     continue
 
+                sd_url = sd_entry.url
                 is_incomplete = sd_entry.is_incomplete
 
                 # Get the AniList title
@@ -231,7 +232,7 @@ class SeaDexSonarr:
                                                                  )
 
                 # Get a string, marking if things are incomplete
-                al_str = f"AniList: {anilist_title}"
+                al_str = f"AniList: {anilist_title} ({sd_url})"
                 if is_incomplete:
                     al_str += f" [MARKED INCOMPLETE]"
 
@@ -306,7 +307,7 @@ class SeaDexSonarr:
                     if len(sonarr_release_groups_discord) == 0:
                         sonarr_release_groups_discord = ["None"]
 
-                    field_dict = {"name": "Sonarr",
+                    field_dict = {"name": "Sonarr Release(s):",
                                   "value": "\n".join(sonarr_release_groups_discord),
                                   }
                     fields.append(field_dict)
@@ -326,7 +327,7 @@ class SeaDexSonarr:
                                                     )
                             )
 
-                        field_dict = {"name": srg,
+                        field_dict = {"name": f"SeaDex recommendation: {srg}",
                                       "value": "\n".join(srg_item["url"]),
                                       }
 
@@ -337,6 +338,7 @@ class SeaDexSonarr:
                             url=self.discord_url,
                             sonarr_title=sonarr_title,
                             al_title=anilist_title,
+                            seadex_url=sd_url,
                             fields=fields,
                             thumb_url=anilist_thumb,
                         )
