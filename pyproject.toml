@@ -1,7 +1,7 @@
 [project]
 
 name = "seadex_sonarr"
-version = "0.0.1"
+version = "0.0.2"
 description = "SeaDex Sonarr Sync"
 readme = "README.md"
 requires-python = ">=3.11"
