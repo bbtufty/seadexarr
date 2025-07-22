@@ -1,4 +1,4 @@
-0.0.4 (Unreleased)
+0.1.0 (2025-07-22)
 ==================
 
 - Add support for Radarr
