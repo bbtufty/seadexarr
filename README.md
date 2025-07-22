@@ -8,11 +8,13 @@
 ![SeaDexArr](example_post.png)
 
 SeaDexArr is designed as a tool to ensure that you have Anime releases on the Arr apps that match with the best 
-releases tagged on SeaDex. 
+releases tagged on SeaDex. SeaDexArr supports both Sonarr and Radarr.
 
-SeaDexArr currently has support for Sonarr. It works by scanning through series tagged as type "Anime", matching these 
-up via the TVDB ID to AniList mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), 
-AniDB mappings (https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database 
+For Sonarr, it works by scanning through series tagged as type "Anime", matching these up via the TVDB ID to AniList 
+mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
+(https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database.
+
+For Radarr, this works much the same but instead using the TMDB IDs.
 
 SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
 automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
@@ -50,6 +52,20 @@ sds = SeaDexSonarr(sonarr_url=sonarr_url,
 sds.run()
 ```
 
+Radarr works much the same:
+
+```
+from seadexarr import SeaDexRadarr
+
+radarr_url = "your-radarr-url:7878"
+radarr_api_key = "abcdefg12345"
+
+sdr = SeaDexRadarr(radarr_url=radarr_url, 
+                   radarr_api_key=radarr_api_key
+                   )
+sdr.run()
+```
+
 If you want to use Discord notifications (recommended), then set up a webhook following 
 [this guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and add the URL into the call:
 
@@ -70,7 +86,7 @@ sds.run()
 ## Adding torrents to client
 
 SeaDexArr has support for adding torrents automatically (current only for Nyaa torrents, and qBittorrent). To do
-this, add qBittorrent connection info, and ideally the Sonarr torrent category to the function call:
+this, add qBittorrent connection info, and ideally the Arr torrent category to the function call:
 
 ```
 ...
@@ -80,7 +96,7 @@ qbit_info = {
     "username": "username",
     "password": "password",
 }
-sonarr_category = "sonarr"
+torrent_category = "sonarr"  # or "radarr", for radarr instances
 
 sds = SeaDexSonarr(sonarr_url=sonarr_url, 
                    sonarr_api_key=sonarr_api_key,
@@ -101,7 +117,7 @@ are:
 
 There are also some torrent-related settings:
 
-- `sonarr_category` should be set to your Sonarr import category, if you have one
+- `torrent_category` should be set to your Sonarr/Radarr import category, if you have one
 - `max_torrents_to_add` can be used to limit the number of torrents you add in one run. Defaults to None, which 
    will just add everything it finds
 
@@ -113,7 +129,6 @@ And some more general settings:
 
 ## Roadmap
 
-- Support for Radarr
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
 - Support for other torrent clients
