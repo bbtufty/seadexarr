@@ -1,41 +1,45 @@
-# SeaDex-Sonarr
+# SeaDexArr
 
-[![](https://img.shields.io/pypi/v/seadex_sonarr.svg?label=PyPI&style=flat-square)](https://pypi.org/pypi/seadex_sonarr/)
-[![](https://img.shields.io/pypi/pyversions/seadex_sonarr.svg?label=Python&color=yellow&style=flat-square)](https://pypi.org/pypi/seadex_sonarr/)
-[![Actions](https://img.shields.io/github/actions/workflow/status/bbtufty/seadex-sonarr/build.yaml?branch=main&style=flat-square)](https://github.com/bbtufty/seadex-sonarr/actions)
+[![](https://img.shields.io/pypi/v/seadexarr.svg?label=PyPI&style=flat-square)](https://pypi.org/pypi/seadexarr/)
+[![](https://img.shields.io/pypi/pyversions/seadexarr.svg?label=Python&color=yellow&style=flat-square)](https://pypi.org/pypi/seadexarr/)
+[![Actions](https://img.shields.io/github/actions/workflow/status/bbtufty/seadexarr/build.yaml?branch=main&style=flat-square)](https://github.com/bbtufty/seadexarr/actions)
 [![License](https://img.shields.io/badge/license-GNUv3-blue.svg?label=License&style=flat-square)](LICENSE)
 
-![SeaDex-Sonarr](example_post.png)
+![SeaDexArr](example_post.png)
 
-SeaDex-Sonarr is designed as a tool to ensure that you have Anime releases on Sonarr that match with the best releases
-tagged on SeaDex. It works by scanning through series tagged as type "Anime" on Sonarr, matching these up via the TVDB
-ID to AniList mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs) and AniDB mappings
-(https://github.com/Anime-Lists/anime-lists), and then linking these through to SeaDex. It then returns a list of 
-links to download, which can also optionally be pushed through  via a Discord bot. This should make it significantly 
-more hands-free to keep the best Anime releases out there.
+SeaDexArr is designed as a tool to ensure that you have Anime releases on the Arr apps that match with the best 
+releases tagged on SeaDex. 
+
+SeaDexArr currently has support for Sonarr. It works by scanning through series tagged as type "Anime", matching these 
+up via the TVDB ID to AniList mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), 
+AniDB mappings (https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database 
+
+SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
+automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
+out there.
 
 ## Installation
 
-SeaDex-Sonarr can be installed via pip:
+SeaDexArr can be installed via pip:
 
 ```
-pip install seadex_sonarr
+pip install seadexarr
 ```
 
 Or the cutting edge via GitHub:
 
 ```
-git clone https://github.com/bbtufty/seadex-sonarr.git
-cd seadex-sonarr
+git clone https://github.com/bbtufty/seadexarr.git
+cd seadexarr
 pip install -e .
 ```
 
 ## Usage
 
-To run SeaDex-Sonarr, the Python code is pretty short:
+To run SeaDexArr for Sonarr, the Python code is pretty short:
 
 ```
-from seadex_sonarr import SeaDexSonarr
+from seadexarr import SeaDexSonarr
 
 sonarr_url = "your-sonarr-url:8989"
 sonarr_api_key = "abcdefg12345"
@@ -65,7 +69,7 @@ sds.run()
 
 ## Adding torrents to client
 
-SeaDex-Sonarr has support for adding torrents automatically (current only for Nyaa torrents, and qBittorrent). To do
+SeaDexArr has support for adding torrents automatically (current only for Nyaa torrents, and qBittorrent). To do
 this, add qBittorrent connection info, and ideally the Sonarr torrent category to the function call:
 
 ```

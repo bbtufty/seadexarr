@@ -1,8 +1,8 @@
 [project]
 
-name = "seadex_sonarr"
+name = "seadexarr"
 version = "0.0.2"
-description = "SeaDex Sonarr Sync"
+description = "SeaDex Arr Sync"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
@@ -47,9 +47,9 @@ docs = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/bbtufty/seadex-sonarr"
-"Bug Reports" = "https://github.com/bbtufty/seadex-sonarr/issues"
-"Source" = "https://github.com/bbtufty/seadex-sonarr"
+"Homepage" = "https://github.com/bbtufty/seadexarr"
+"Bug Reports" = "https://github.com/bbtufty/seadexarr/issues"
+"Source" = "https://github.com/bbtufty/seadexarr"
 
 [build-system]
 requires = [
