@@ -5,7 +5,7 @@ from discordwebhook import Discord
 
 def discord_push(
     url,
-    sonarr_title,
+    arr_title,
     al_title,
     seadex_url,
     fields,
@@ -15,7 +15,7 @@ def discord_push(
 
     Args:
         url (str): URL to post to
-        sonarr_title (str): Title as in Sonarr
+        arr_title (str): Title as in Arr instance
         al_title (str): Title as in AniList
         seadex_url (str): URL to SeaDex page
         fields (list): List of dicts containing links
@@ -28,8 +28,8 @@ def discord_push(
         embeds=[
             {
                 "author": {
-                    "name": sonarr_title,
-                    "url": "https://github.com/bbtufty/seadex-sonarr",
+                    "name": arr_title,
+                    "url": "https://github.com/bbtufty/seadexarr",
                 },
                 "title": al_title,
                 "description": seadex_url,

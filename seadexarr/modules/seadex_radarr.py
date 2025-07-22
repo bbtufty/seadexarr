@@ -1,52 +1,21 @@
 import copy
 import time
 
-import arrapi.exceptions
 import requests
-from arrapi import SonarrAPI
+from arrapi import RadarrAPI
 from seadex import EntryNotFoundError
 
-from .anilist import get_anilist_title, get_anilist_n_eps, get_anilist_thumb, get_anilist_format
+from .anilist import get_anilist_title, get_anilist_thumb
 from .discord import discord_push
 from .log import centred_string, left_aligned_string
 from .seadex_arr import SeaDexArr
 
 
-def get_tvdb_id(mapping):
-    """Get TVDB ID for a particular mapping
-
-    Args:
-        mapping (dict): Dictionary of SeaDex mappings
-
-    Returns:
-        int: TVDB ID
-    """
-
-    tvdb_id = mapping.get("tvdb_id", None)
-
-    return tvdb_id
-
-
-def get_tvdb_season(mapping):
-    """Get TVDB season for a particular mapping
-
-    Args:
-        mapping (dict): Dictionary of SeaDex mappings
-
-    Returns:
-        int: TVDB season
-    """
-
-    tvdb_season = mapping.get("tvdb_season", -1)
-
-    return tvdb_season
-
-
-class SeaDexSonarr(SeaDexArr):
+class SeaDexRadarr(SeaDexArr):
 
     def __init__(self,
-                 sonarr_url,
-                 sonarr_api_key,
+                 radarr_url,
+                 radarr_api_key,
                  qbit_info=None,
                  torrent_category=None,
                  max_torrents_to_add=None,
@@ -61,13 +30,13 @@ class SeaDexSonarr(SeaDexArr):
                  interactive=False,
                  log_level="INFO",
                  ):
-        """Sync Sonarr instance with SeaDex
+        """Sync Radarr instance with SeaDex
 
         Args:
-            sonarr_url (str): URL for Sonarr instance
-            sonarr_api_key (str): API key for Sonarr instance
+            radarr_url (str): URL for Radarr instance
+            radarr_api_key (str): API key for Radarr instance
             qbit_info (dict): Dictionary of qBit info
-            torrent_category (str): Torrent category for sonarr.
+            torrent_category (str): Torrent category for Radarr.
                 Defaults to None
             public_only (bool): Whether to only return URLs for public torrents.
                 Defaults to True
@@ -75,10 +44,10 @@ class SeaDexSonarr(SeaDexArr):
                 Defaults to True
             want_best (bool): Whether to return only torrents marked as best.
                 Defaults to True
-            anime_mappings (dict): Custom mappings between TVDB/TMDB/AniList.
+            anime_mappings (dict): Custom mappings between TMDB/AniList.
                 Defaults to None, which will use the default mappings
                 from Kometa (https://github.com/Kometa-Team/Anime-IDs)
-            anidb_mappings (dict): Custom mappings between TVDB/TMDB/AniDB.
+            anidb_mappings (dict): Custom mappings between TMDB/AniDB.
                 Defaults to None, which will use the default mappings
                 from https://github.com/Anime-Lists/anime-lists/
             sleep_time (float): Time to wait, in seconds, between requests, to avoid
@@ -105,19 +74,19 @@ class SeaDexSonarr(SeaDexArr):
                            log_level=log_level,
                            )
 
-        # Set up Sonarr
-        self.sonarr_url = sonarr_url
-        self.sonarr_api_key = sonarr_api_key
-        self.sonarr = SonarrAPI(url=self.sonarr_url,
-                                apikey=self.sonarr_api_key,
+        # Set up Radarr
+        self.radarr_url = radarr_url
+        self.radarr_api_key = radarr_api_key
+        self.radarr = RadarrAPI(url=self.radarr_url,
+                                apikey=self.radarr_api_key,
                                 )
 
     def run(self):
-        """Run the SeaDex Sonarr Syncer"""
+        """Run the SeaDex Radarr syncer"""
 
-        # Get all the anime series
-        all_sonarr_series = self.get_all_sonarr_series()
-        n_sonarr = len(all_sonarr_series)
+        # Get all the anime movies
+        all_radarr_movies = self.get_all_radarr_movies()
+        n_radarr = len(all_radarr_movies)
 
         self.logger.info(
             centred_string(self.log_line_sep * self.log_line_length,
@@ -125,7 +94,7 @@ class SeaDexSonarr(SeaDexArr):
                            )
         )
         self.logger.info(
-            centred_string(f"Starting SeaDex-Sonarr for {n_sonarr} series",
+            centred_string(f"Starting SeaDex-Radarr for {n_radarr} movies",
                            total_length=self.log_line_length,
                            )
         )
@@ -135,13 +104,13 @@ class SeaDexSonarr(SeaDexArr):
                            )
         )
 
-        # Now start looping over these series, finding any potential mappings
-        for sonarr_idx, sonarr_series in enumerate(all_sonarr_series):
+        # Now start looping over these movies
+        for radarr_idx, radarr_movie in enumerate(all_radarr_movies):
 
-            # Pull Sonarr/TVDB info out
-            tvdb_id = sonarr_series.tvdbId
-            sonarr_title = sonarr_series.title
-            sonarr_series_id = sonarr_series.id
+            # Pull Radarr/TMDB info out
+            tmdb_id = radarr_movie.tmdbId
+            radarr_title = radarr_movie.title
+            radarr_movie_id = radarr_movie.id
 
             self.logger.info(
                 centred_string(self.log_line_sep * self.log_line_length,
@@ -149,7 +118,7 @@ class SeaDexSonarr(SeaDexArr):
                                )
             )
             self.logger.info(
-                centred_string(f"[{sonarr_idx + 1}/{n_sonarr}] Sonarr: {sonarr_title}",
+                centred_string(f"[{radarr_idx + 1}/{n_radarr}] Radarr: {radarr_title}",
                                total_length=self.log_line_length,
                                )
             )
@@ -159,12 +128,12 @@ class SeaDexSonarr(SeaDexArr):
                                )
             )
 
-            # Get the mappings from the Sonarr series to AniList
-            al_mappings = self.get_anilist_ids(tvdb_id=tvdb_id)
+            # Get the mappings from the Radarr movies to AniList
+            al_mappings = self.get_anilist_ids(tmdb_id=tmdb_id)
 
             if len(al_mappings) == 0:
                 self.logger.warning(
-                    centred_string(f"No AniList mappings found for {sonarr_title}. Skipping",
+                    centred_string(f"No AniList mappings found for {radarr_title}. Skipping",
                                    total_length=self.log_line_length,
                                    )
                 )
@@ -177,7 +146,7 @@ class SeaDexSonarr(SeaDexArr):
 
             for anidb_id, mapping in al_mappings.items():
 
-                # Map the TVDB ID through to AniList
+                # Map the TMDB ID through to AniList
                 al_id = mapping.get("anilist_id", None)
                 if al_id is None:
                     self.logger.debug(
@@ -227,16 +196,10 @@ class SeaDexSonarr(SeaDexArr):
                                    )
                 )
 
-                # Get the episode list for all relevant episodes
-                ep_list = self.get_ep_list(sonarr_series_id=sonarr_series_id,
-                                           anidb_id=anidb_id,
-                                           mapping=mapping,
-                                           )
-
-                sonarr_release_groups = self.get_sonarr_release_groups(ep_list=ep_list)
+                radarr_release_group = self.get_radarr_release_group(radarr_movie_id=radarr_movie_id)
 
                 self.logger.debug(
-                    centred_string(f"Sonarr: {', '.join(sonarr_release_groups)}",
+                    centred_string(f"Radarr: {radarr_release_group}",
                                    total_length=self.log_line_length,
                                    )
                 )
@@ -326,15 +289,14 @@ class SeaDexSonarr(SeaDexArr):
                         seadex_dict = copy.deepcopy(seadex_dict_filtered)
 
                 # Check these things match up how we'd expect
-                sonarr_matches_seadex = False
-                for sonarr_release_group in sonarr_release_groups:
-                    if sonarr_release_group in seadex_dict.keys():
-                        sonarr_matches_seadex = True
+                radarr_matches_seadex = False
+                if radarr_release_group in seadex_dict.keys():
+                    radarr_matches_seadex = True
 
-                if not sonarr_matches_seadex:
+                if not radarr_matches_seadex:
 
                     self.logger.info(
-                        centred_string(f"Mismatch found between SeaDex recommendation and existing files on Sonarr!",
+                        centred_string(f"Mismatch found between SeaDex recommendation and existing Radarr movie!",
                                        total_length=self.log_line_length,
                                        )
                     )
@@ -349,13 +311,13 @@ class SeaDexSonarr(SeaDexArr):
                                                                      )
                     fields = []
 
-                    # The first field should be the Sonarr groups. If it's empty, mention it's missing
-                    sonarr_release_groups_discord = copy.deepcopy(sonarr_release_groups)
-                    if len(sonarr_release_groups_discord) == 0:
-                        sonarr_release_groups_discord = ["None"]
+                    # The first field should be the Radarr group. If it's empty, mention it's missing
+                    radarr_release_group_discord = copy.deepcopy(radarr_release_group)
+                    if radarr_release_group_discord is None:
+                        radarr_release_group_discord = "None"
 
-                    field_dict = {"name": "Sonarr Release(s):",
-                                  "value": "\n".join(sonarr_release_groups_discord),
+                    field_dict = {"name": "Radarr Release:",
+                                  "value": radarr_release_group_discord,
                                   }
                     fields.append(field_dict)
 
@@ -393,7 +355,7 @@ class SeaDexSonarr(SeaDexArr):
                         if self.discord_url is not None:
                             discord_push(
                                 url=self.discord_url,
-                                arr_title=sonarr_title,
+                                arr_title=radarr_title,
                                 al_title=anilist_title,
                                 seadex_url=sd_url,
                                 fields=fields,
@@ -441,48 +403,38 @@ class SeaDexSonarr(SeaDexArr):
 
         return True
 
-    def get_all_sonarr_series(self):
-        """Get all series in Sonarr tagged as anime"""
+    def get_all_radarr_movies(self):
+        """Get all movies in Radarr that have an associated AniDB ID"""
 
-        # Get a list of everything marked as type Anime in the Sonarr instance
-        sonarr_series = []
+        # Get a list of all movies
+        radarr_movies = []
 
-        for s in self.sonarr.all_series():
-            sonarr_series_type = s.seriesType
+        all_tmdb_ids = [self.anime_mappings[x].get("tmdb_movie_id", None)
+                        for x in self.anime_mappings
+                        if "tmdb_movie_id" in self.anime_mappings[x].keys()
+                        ]
 
-            if sonarr_series_type == "anime":
-                sonarr_series.append(s)
+        for m in self.radarr.all_movies():
+            tmdb_id = m.tmdbId
+            if tmdb_id in all_tmdb_ids:
+                radarr_movies.append(m)
 
-        sonarr_series.sort(key=lambda x: x.title)
+        radarr_movies.sort(key=lambda x: x.title)
 
-        return sonarr_series
-
-    def get_sonarr_series(self, tvdb_id):
-        """Get Sonarr series for a given TVDB ID
-
-        Args:
-            tvdb_id (int): TVDB ID
-        """
-
-        try:
-            series = self.sonarr.get_series(tvdb_id=tvdb_id)
-        except arrapi.exceptions.NotFound:
-            series = None
-
-        return series
+        return radarr_movies
 
     def get_anilist_ids(self,
-                        tvdb_id,
+                        tmdb_id,
                         ):
-        """Get a list of entries that match on TVDB ID
+        """Get a list of entries that match on TMDB ID
 
         Args:
-            tvdb_id (int): TVDB ID
+            tmdb_id (int): TMDB ID
         """
 
         anilist_mappings = {
             n: m for n, m in self.anime_mappings.items()
-            if m.get("tvdb_id", None) == tvdb_id
+            if m.get("tmdb_movie_id", None) == tmdb_id
         }
 
         # Filter out anything without an AniList ID
@@ -499,160 +451,34 @@ class SeaDexSonarr(SeaDexArr):
 
         return anilist_mappings
 
-    def get_ep_list(self,
-                    sonarr_series_id,
-                    anidb_id,
-                    mapping,
-                    ):
-        """Get a list of relevant episodes for an AniList mapping
+    def get_radarr_release_group(self,
+                                 radarr_movie_id,
+                                 ):
+        """Get the release group for a Radarr movie
 
         Args:
-            sonarr_series_id (int): Series ID in Sonarr
-            anidb_id (int): AniDB ID
-            mapping (dict): Mapping dictionary between TVDB and AniList
+            radarr_movie_id (int): ID for movie in Radarr
         """
 
-        # If we have any season info, pull that out now
-        tvdb_season = get_tvdb_season(mapping)
-        al_id = mapping.get("anilist_id", -1)
-
-        if al_id == -1:
-            raise ValueError("AniList ID not defined!")
-
-        # Get all the episodes for a season. Use the raw Sonarr API
-        # call here to get details
-        eps_req_url = (f"{self.sonarr_url}/api/v3/episode?"
-                       f"seriesId={sonarr_series_id}&"
-                       f"includeImages=false&"
-                       f"includeEpisodeFile=true&"
-                       f"apikey={self.sonarr_api_key}"
+        # Get the movie file if it exists
+        mov_req_url = (f"{self.radarr_url}/api/v3/moviefile?"
+                       f"movieId={radarr_movie_id}&"
+                       f"apikey={self.radarr_api_key}"
                        )
-        eps_req = requests.get(eps_req_url)
+        mov_req = requests.get(mov_req_url)
 
-        if eps_req.status_code != 200:
-            raise Warning("Failed get episodes data from Sonarr")
+        radarr_release_group = [r["releaseGroup"] for r in mov_req.json()]
 
-        ep_list = eps_req.json()
+        # If we have multiple options, throw up an error
+        if len(radarr_release_group) > 1:
+            raise ValueError(f"Multiple files found for movie {radarr_movie_id}")
 
-        # Sort by season/episode number for slicing later
-        ep_list = sorted(ep_list, key=lambda x: (x["seasonNumber"], x["episodeNumber"]))
+        # If we have nothing, return None
+        elif len(radarr_release_group) == 0:
+            radarr_release_group = None
 
-        # Filter down here by various things
-        final_ep_list = []
-        for ep in ep_list:
-
-            include_episode = True
-
-            # First, check by season
-
-            # If the TVDB season is -1, this is anything but specials
-            if tvdb_season == -1 and ep["seasonNumber"] == 0:
-                include_episode = False
-
-            # Else, if we have a season defined, and it doesn't match, don't include
-            elif tvdb_season != -1 and ep["seasonNumber"] != tvdb_season:
-                include_episode = False
-
-            # If we've passed the vibe check, include things now
-            if include_episode:
-                final_ep_list.append(ep)
-
-        # For OVAs and movies, the offsets can often be wrong, so if we have specific mappings
-        # then take that into account here
-        al_format, self.al_cache = get_anilist_format(al_id,
-                                                      al_cache=self.al_cache,
-                                                      )
-
-        # Slice the list to get the correct episodes, so any potential offsets
-        ep_offset = mapping.get("tvdb_epoffset", 0)
-        n_eps, self.al_cache = get_anilist_n_eps(al_id,
-                                                 al_cache=self.al_cache,
-                                                 )
-
-        # Potentially pull out a bunch of mappings from AniDB. These should
-        # be for anything not marked as TV
-        anidb_mapping_dict = {}
-        if al_format not in ["TV"]:
-            anidb_item = self.anidb_mappings.findall(f"anime[@anidbid='{anidb_id}']")
-
-            # If we don't find anything, no worries. If we find multiple, worries
-            if len(anidb_item) > 1:
-                raise ValueError("Multiple AniDB mappings found. This should not happen!")
-
-            if len(anidb_item) == 1:
-                anidb_item = anidb_item[0]
-                anidb_mapping_list = anidb_item.findall("mapping-list")
-                if len(anidb_mapping_list) > 0:
-                    for ms in anidb_mapping_list:
-                        m = ms.findall("mapping")
-                        for i in m:
-                            # Split at semicolons
-                            i_split = i.text.strip(";").split(";")
-                            i_split = [x.split("-") for x in i_split]
-
-                            # Only match things if AniList and AniDB agree on the TVDB season
-                            anidb_tvdbseason = int(i.attrib["tvdbseason"])
-                            if not anidb_tvdbseason == tvdb_season:
-                                continue
-
-                            anidb_mapping_dict[anidb_tvdbseason] = {int(x[1]): int(x[0]) for x in i_split}
-
-        # Prefer the AniDB mapping dict over any offsets
-        if len(anidb_mapping_dict) > 0:
-            anidb_final_ep_list = []
-
-            # See if we have the mapping for each entry
-            for ep in final_ep_list:
-                anidb_mapping_dict_entry = anidb_mapping_dict.get(ep["seasonNumber"], {}).get(ep["episodeNumber"], None)
-                if anidb_mapping_dict_entry is not None:
-                    anidb_final_ep_list.append(ep)
-
-            final_ep_list = copy.deepcopy(anidb_final_ep_list)
-
+        # Otherwise, take the release group
         else:
-            # If we don't get a number of episodes, use them all
-            if n_eps is None:
-                n_eps = len(final_ep_list) - ep_offset
+            radarr_release_group = radarr_release_group[0]
 
-            final_ep_list = final_ep_list[ep_offset:n_eps + ep_offset]
-
-        return final_ep_list
-
-    def get_sonarr_release_groups(self,
-                                  ep_list,
-                                  ):
-        """Get a unique list of release groups for a series in Sonarr
-
-        Args:
-            ep_list (list): List of episodes
-        """
-
-        # Look through, get release groups from the existing Sonarr files
-        # and note any potential missing files
-        sonarr_release_groups = []
-        missing_eps = 0
-        n_eps = len(ep_list)
-        for ep in ep_list:
-
-            # Get missing episodes, then skip
-            if ep["episodeFileId"] == 0:
-                missing_eps += 1
-                continue
-
-            release_group = ep.get("episodeFile", {}).get("releaseGroup", None)
-            if release_group is None:
-                continue
-
-            if release_group not in sonarr_release_groups:
-                sonarr_release_groups.append(release_group)
-
-        if missing_eps > 0:
-            self.logger.info(
-                centred_string(f"Missing episodes: {missing_eps}/{n_eps}",
-                               total_length=self.log_line_length,
-                               )
-            )
-
-        sonarr_release_groups.sort()
-
-        return sonarr_release_groups
+        return radarr_release_group
