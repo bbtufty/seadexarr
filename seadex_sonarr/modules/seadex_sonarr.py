@@ -2,11 +2,12 @@ import copy
 import json
 import os
 import time
-from xml.etree import ElementTree
 from datetime import datetime
 from urllib.request import urlretrieve
+from xml.etree import ElementTree
 
 import arrapi.exceptions
+import qbittorrentapi
 import requests
 from arrapi import SonarrAPI
 from seadex import SeaDexEntry, EntryNotFoundError
@@ -14,6 +15,7 @@ from seadex import SeaDexEntry, EntryNotFoundError
 from .anilist import get_anilist_title, get_anilist_n_eps, get_anilist_thumb, get_anilist_format
 from .discord import discord_push
 from .log import setup_logger, centred_string, left_aligned_string
+from .torrent import get_nyaa_url
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
@@ -54,6 +56,9 @@ class SeaDexSonarr:
     def __init__(self,
                  sonarr_url,
                  sonarr_api_key,
+                 qbit_info=None,
+                 sonarr_category=None,
+                 max_torrents_to_add=None,
                  discord_url=None,
                  public_only=True,
                  prefer_dual_audio=True,
@@ -62,6 +67,7 @@ class SeaDexSonarr:
                  anidb_mappings=None,
                  sleep_time=2,
                  cache_time=1,
+                 interactive=False,
                  log_level="INFO",
                  ):
         """Sync Sonarr instance with SeaDex
@@ -69,6 +75,9 @@ class SeaDexSonarr:
         Args:
             sonarr_url (str): URL for Sonarr instance
             sonarr_api_key (str): API key for Sonarr instance
+            qbit_info (dict): Dictionary of qBit info
+            sonarr_category (str): Torrent category for sonarr.
+                Defaults to None
             public_only (bool): Whether to only return URLs for public torrents.
                 Defaults to True
             prefer_dual_audio (bool): Whether to prefer dual audio torrents.
@@ -85,12 +94,13 @@ class SeaDexSonarr:
                 hitting API rate limits. Defaults to 0 seconds (no sleep).
             cache_time (float): Cache time for files that provide mappings.
                 Defaults to 1 day
+            interactive (bool): Whether to run in interactive mode.
             log_level (str): Logging level. Defaults to INFO.
         """
 
         self.cache_time = cache_time
 
-        # Get the mappings files
+        # Get the mapping files
         if anime_mappings is None:
             anime_mappings = self.get_anime_mappings()
         if anidb_mappings is None:
@@ -109,16 +119,39 @@ class SeaDexSonarr:
                                 apikey=self.sonarr_api_key,
                                 )
 
-        # Set up cache for AL API calls
-        self.al_cache = {}
+        # Set up torrent-related stuff
+
+        # qBit
+        self.qbit = None
+        if qbit_info is not None:
+            qbit = qbittorrentapi.Client(**qbit_info)
+
+            # Ensure this works
+            try:
+                qbit.auth_log_in()
+            except qbittorrentapi.LoginFailed:
+                raise ValueError("qBittorrent login failed!")
+
+            self.qbit = qbit
+
+        # Hooks between torrents and Sonarr, and torrent number
+        # bookkeeping
+        self.sonarr_category = sonarr_category
+        self.max_torrents_to_add = max_torrents_to_add
+        self.torrents_added = 0
 
         # Discord
         self.discord_url = discord_url
+
+        # Set up cache for AL API calls
+        self.al_cache = {}
 
         # Flags for filtering torrents
         self.public_only = public_only
         self.prefer_dual_audio = prefer_dual_audio
         self.want_best = want_best
+
+        self.interactive = interactive
 
         self.sleep_time = sleep_time
 
@@ -207,7 +240,7 @@ class SeaDexSonarr:
                     )
                     continue
 
-                # Get the SeaDex entry, if it exists
+                # Get the SeaDex entry if it exists
                 try:
                     sd_entry = self.seadex.from_id(al_id)
                 except EntryNotFoundError:
@@ -278,6 +311,68 @@ class SeaDexSonarr:
                                    )
                 )
 
+                # If we're in interactive mode and there are multiple options here, then select
+                if self.interactive and len(seadex_dict) > 1:
+
+                    self.logger.warning(
+                        centred_string(f"Multiple releases found!:",
+                                       total_length=self.log_line_length,
+                                       )
+                    )
+                    self.logger.warning(
+                        left_aligned_string(f"Here are the SeaDex notes:",
+                                            total_length=self.log_line_length,
+                                            )
+                    )
+
+                    notes = sd_entry.notes.split("\n")
+                    for n in notes:
+                        self.logger.warning(
+                            left_aligned_string(n,
+                                                total_length=self.log_line_length,
+                                                )
+                        )
+                    self.logger.warning(
+                        left_aligned_string("",
+                                            total_length=self.log_line_length,
+                                            )
+                    )
+
+                    all_srgs = list(seadex_dict.keys())
+                    for s_i, s in enumerate(all_srgs):
+                        self.logger.warning(
+                            left_aligned_string(f"[{s_i}]: {s}",
+                                                total_length=self.log_line_length,
+                                                )
+                        )
+
+                    srgs_to_grab = input(f"Which release do you want to grab? "
+                                         f"Single number for one, comma separated list for multiple, or blank for all: ")
+
+                    srgs_to_grab = srgs_to_grab.split(",")
+
+                    # Remove any blank entries
+                    while "" in srgs_to_grab:
+                        srgs_to_grab.remove("")
+
+                    # If we have some selections, parse down
+                    if len(srgs_to_grab) > 0:
+                        seadex_dict_filtered = {}
+                        for srg_idx in srgs_to_grab:
+
+                            try:
+                                srg = all_srgs[int(srg_idx)]
+                            except IndexError:
+                                self.logger.warning(
+                                    left_aligned_string(f"Index {srg_idx} is out of range",
+                                                        total_length=self.log_line_length,
+                                                        )
+                                )
+                                continue
+                            seadex_dict_filtered[srg] = copy.deepcopy(seadex_dict[srg])
+
+                        seadex_dict = copy.deepcopy(seadex_dict_filtered)
+
                 # Check these things match up how we'd expect
                 sonarr_matches_seadex = False
                 for sonarr_release_group in sonarr_release_groups:
@@ -302,7 +397,7 @@ class SeaDexSonarr:
                                                                      )
                     fields = []
 
-                    # First field should be the Sonarr groups. If it's empty, mention it's missing
+                    # The first field should be the Sonarr groups. If it's empty, mention it's missing
                     sonarr_release_groups_discord = copy.deepcopy(sonarr_release_groups)
                     if len(sonarr_release_groups_discord) == 0:
                         sonarr_release_groups_discord = ["None"]
@@ -333,15 +428,25 @@ class SeaDexSonarr:
 
                         fields.append(field_dict)
 
-                    if len(fields) > 0 and self.discord_url is not None:
-                        discord_push(
-                            url=self.discord_url,
-                            sonarr_title=sonarr_title,
-                            al_title=anilist_title,
-                            seadex_url=sd_url,
-                            fields=fields,
-                            thumb_url=anilist_thumb,
-                        )
+                    # If we've got stuff, time to do something!
+                    if len(fields) > 0:
+
+                        # Add torrents to qBittorrent
+                        if self.qbit is not None:
+                            self.add_torrent(torrent_dict=seadex_dict,
+                                             torrent_client="qbit",
+                                             )
+
+                        # Push a message to Discord
+                        if self.discord_url is not None:
+                            discord_push(
+                                url=self.discord_url,
+                                sonarr_title=sonarr_title,
+                                al_title=anilist_title,
+                                seadex_url=sd_url,
+                                fields=fields,
+                                thumb_url=anilist_thumb,
+                            )
                 else:
 
                     self.logger.info(
@@ -365,6 +470,20 @@ class SeaDexSonarr:
                                )
             )
 
+            if self.max_torrents_to_add is not None:
+                if self.torrents_added >= self.max_torrents_to_add:
+                    self.logger.info(
+                        centred_string("Added maximum number of torrents for this run. Stopping",
+                                       total_length=self.log_line_length,
+                                       )
+                    )
+                    self.logger.info(
+                        centred_string(self.log_line_sep * self.log_line_length,
+                                       total_length=self.log_line_length,
+                                       )
+                    )
+                    return True
+
             # Add in a blank line to break things up
             self.logger.info("")
 
@@ -375,21 +494,10 @@ class SeaDexSonarr:
 
         anime_mappings_file = os.path.join("anime_ids.json")
 
-        # If file doesn't exist, get it
-        if not os.path.exists(anime_mappings_file):
-            urlretrieve(ANIME_IDS_URL, anime_mappings_file)
-
-        # Check if this is older than
-        anime_mtime = os.path.getmtime(anime_mappings_file)
-        anime_datetime = datetime.fromtimestamp(anime_mtime)
-        now_datetime = datetime.now()
-
-        # Get the time difference
-        t_diff = now_datetime - anime_datetime
-
-        # If the file is older than the cache time, re-download
-        if t_diff.days >= self.cache_time:
-            urlretrieve(ANIME_IDS_URL, anime_mappings_file)
+        # If a file doesn't exist, get it
+        self.get_external_mappings(f=anime_mappings_file,
+                                   url=ANIME_IDS_URL,
+                                   )
 
         with open(anime_mappings_file, "r") as f:
             anime_mappings = json.load(f)
@@ -401,25 +509,42 @@ class SeaDexSonarr:
 
         anidb_mappings_file = os.path.join("anime-list-master.xml")
 
-        # If file doesn't exist, get it
-        if not os.path.exists(anidb_mappings_file):
-            urlretrieve(ANIDB_MAPPINGS_URL, anidb_mappings_file)
-
-        # Check if this is older than
-        anime_mtime = os.path.getmtime(anidb_mappings_file)
-        anime_datetime = datetime.fromtimestamp(anime_mtime)
-        now_datetime = datetime.now()
-
-        # Get the time difference
-        t_diff = now_datetime - anime_datetime
-
-        # If the file is older than the cache time, re-download
-        if t_diff.days >= self.cache_time:
-            urlretrieve(ANIME_IDS_URL, anidb_mappings_file)
+        # If a file doesn't exist, get it
+        self.get_external_mappings(f=anidb_mappings_file,
+                                   url=ANIDB_MAPPINGS_URL,
+                                   )
 
         anidb_mappings = ElementTree.parse(anidb_mappings_file).getroot()
 
         return anidb_mappings
+
+    def get_external_mappings(self,
+                              f,
+                              url,
+                              ):
+        """Get an external mapping file, respecting a cache time
+
+        Args:
+            f (str): file on disk
+            url (str): url to download the file from
+        """
+
+        if not os.path.exists(f):
+            urlretrieve(url, f)
+
+        # Check if this is older than the cache
+        f_mtime = os.path.getmtime(f)
+        f_datetime = datetime.fromtimestamp(f_mtime)
+        now_datetime = datetime.now()
+
+        # Get the time difference
+        t_diff = now_datetime - f_datetime
+
+        # If the file is older than the cache time, re-download
+        if t_diff.days >= self.cache_time:
+            urlretrieve(url, f)
+
+        return True
 
     def get_all_sonarr_series(self):
         """Get all series in Sonarr tagged as anime"""
@@ -454,7 +579,7 @@ class SeaDexSonarr:
     def get_anilist_ids(self,
                         tvdb_id,
                         ):
-        """Get list of entries that match on TVDB ID
+        """Get a list of entries that match on TVDB ID
 
         Args:
             tvdb_id (int): TVDB ID
@@ -484,7 +609,7 @@ class SeaDexSonarr:
                     anidb_id,
                     mapping,
                     ):
-        """Get list of relevant episodes for an AniList mapping
+        """Get a list of relevant episodes for an AniList mapping
 
         Args:
             sonarr_series_id (int): Series ID in Sonarr
@@ -537,7 +662,7 @@ class SeaDexSonarr:
             if include_episode:
                 final_ep_list.append(ep)
 
-        # For OVAs and movies, the offsets can often be wrong, so if we have weird mappings
+        # For OVAs and movies, the offsets can often be wrong, so if we have specific mappings
         # then take that into account here
         al_format, self.al_cache = get_anilist_format(al_id,
                                                       al_cache=self.al_cache,
@@ -676,15 +801,115 @@ class SeaDexSonarr:
                                       if t.is_dual_audio
                                       ]
 
-        # Pull out release groups and URLs from the final list we have
+        # Pull out release groups, URLs, and hashes from the final list we have
         # as a dictionary
         seadex_release_groups = {}
         for t in final_torrent_list:
 
             if t.release_group not in seadex_release_groups:
                 seadex_release_groups[t.release_group] = {
-                    "url": []
+                    "url": {}
                 }
-            seadex_release_groups[t.release_group]["url"].append(t.url)
 
+            seadex_release_groups[t.release_group]["url"][t.url] = {"url": t.url,
+                                                                    "tracker": t.tracker.name,
+                                                                    "hash": t.infohash,
+                                                                    }
         return seadex_release_groups
+
+    def add_torrent(self,
+                    torrent_dict,
+                    torrent_client="qbit",
+                    ):
+        """Add torrent(s) to a torrent client
+
+        Args:
+            torrent_dict (dict): Dictionary of torrent info
+            torrent_client (str): Torrent client to use. Options are
+                "qbit" for qBittorrent. Defaults to "qbit"
+        """
+
+        for srg, srg_item in torrent_dict.items():
+
+            self.logger.info(
+                left_aligned_string(f"Adding torrent(s) for group {srg} to {torrent_client}",
+                                    total_length=self.log_line_length,
+                                    )
+            )
+
+            for url in srg_item["url"]:
+                item_hash = srg_item["url"][url]["hash"]
+                tracker = srg_item["url"][url]["tracker"]
+
+                # Nyaa
+                if tracker.lower() == "nyaa":
+                    parsed_url = get_nyaa_url(url)
+
+                # Otherwise, bug out
+                else:
+                    raise ValueError(f"Unable to parse torrent links from {tracker}")
+
+                if parsed_url is None:
+                    raise Exception("Have not managed to parse the torrent URL")
+
+                if torrent_client == "qbit":
+                    success = self.add_torrent_to_qbit(url=url,
+                                                       torrent_url=parsed_url,
+                                                       torrent_hash=item_hash,
+                                                       )
+
+                else:
+                    raise ValueError(f"Unsupported torrent client {torrent_client}")
+
+                if success:
+                    self.logger.info(
+                        left_aligned_string(f"   Added {parsed_url} to {torrent_client}",
+                                            total_length=self.log_line_length,
+                                            )
+                    )
+
+                    # Increment the number of torrents added, and if we've hit the limit then
+                    # jump out
+                    self.torrents_added += 1
+                    if self.max_torrents_to_add is not None:
+                        if self.torrents_added >= self.max_torrents_to_add:
+                            return True
+
+                else:
+                    raise ValueError(f"Cannot handle torrent client {torrent_client}")
+
+        return True
+
+    def add_torrent_to_qbit(self,
+                            url,
+                            torrent_url,
+                            torrent_hash,
+                            ):
+        """Add a torrent to qbittorrent
+
+        Args:
+            url (str): SeaDex URL
+            torrent_url (str): Torrent URL to add to client
+            torrent_hash (str): Torrent hash
+        """
+
+        # Ensure we don't already have the hash in there
+        torr_info = self.qbit.torrents_info()
+        torr_hashes = [i.hash for i in torr_info]
+
+        if torrent_hash in torr_hashes:
+            self.logger.debug(
+                centred_string(f"Torrent {url} already in qBittorrent",
+                               total_length=self.log_line_length,
+                               )
+            )
+            return False
+
+        # Add the torrent
+        result = self.qbit.torrents_add(urls=torrent_url,
+                                        category=self.sonarr_category,
+                                        )
+        if result != "Ok.":
+            raise Exception("Failed to add torrent")
+
+        return True
