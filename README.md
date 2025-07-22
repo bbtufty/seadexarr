@@ -22,7 +22,7 @@ SeaDex-Sonarr can be installed via pip:
 pip install seadex_sonarr
 ```
 
-Or the cutting edge via GitHUb:
+Or the cutting edge via GitHub:
 
 ```
 git clone https://github.com/bbtufty/seadex-sonarr.git
@@ -63,20 +63,54 @@ sds = SeaDexSonarr(sonarr_url=sonarr_url,
 sds.run()
 ```
 
+## Adding torrents to client
+
+SeaDex-Sonarr has support for adding torrents automatically (current only for Nyaa torrents, and qBittorrent). To do
+this, add qBittorrent connection info, and ideally the Sonarr torrent category to the function call:
+
+```
+...
+
+qbit_info = {
+    "host": "http://localhost:8080",
+    "username": "username",
+    "password": "password",
+}
+sonarr_category = "sonarr"
+
+sds = SeaDexSonarr(sonarr_url=sonarr_url, 
+                   sonarr_api_key=sonarr_api_key,
+                   qbit_info=qbit_info,
+                   torrent_category=torrent_category,
+                   )
+sds.run()
+```
+
 ## Advanced Settings
 
 There are a number of switches you can use to filter down what SeaDex-Sonarr returns as the "best" option for you. These 
 are:
 
-- `public_only` (defaults to True), will only return results
-  from public trackers
-- `prefer_dual_audio` (defaults to True), will prefer results
-  tagged as dual audio, if any exist
-- `want_best` (defaults to True), will prefer results tagged
-  as best, if any exist
+- `public_only` (defaults to True), will only return results from public trackers
+- `prefer_dual_audio` (defaults to True) will prefer results tagged as dual audio, if any exist
+- `want_best` (defaults to True) will prefer results tagged as best, if any exist
+
+There are also some torrent-related settings:
+
+- `sonarr_category` should be set to your Sonarr import category, if you have one
+- `max_torrents_to_add` can be used to limit the number of torrents you add in one run. Defaults to None, which 
+   will just add everything it finds
+
+And some more general settings:
+
+- `interactive` (defaults to False). If True, will enable interactive mode, which when multiple torrent options are
+   found, will ask for input to choose one. Otherwise, will just grab everything
+- `log_level` (defaults to INFO), controls the level of logging. Can be WARNING, INFO, or DEBUG
 
 ## Roadmap
 
+- Support for Radarr
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
-- Add a way to automatically add suggested releases to torrent client
+- Support for other torrent clients
+- Support for torrents on sites other than Nyaa
