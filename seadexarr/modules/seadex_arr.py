@@ -310,7 +310,7 @@ class SeaDexArr:
                                total_length=self.log_line_length,
                                )
             )
-            return False
+            return True
 
         # Add the torrent
         result = self.qbit.torrents_add(urls=torrent_url,
