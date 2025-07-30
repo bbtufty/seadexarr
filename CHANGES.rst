@@ -1,6 +1,7 @@
-0.1.1 (Unreleased)
+0.2.0 (Unreleased)
 ==================
 
+- Add Docker support
 - Move to config files, to make the call simpler
 - Fix crash if torrent in list but not already downloaded
 
