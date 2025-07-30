@@ -268,6 +268,8 @@ class SeaDexArr:
                 "qbit" for qBittorrent. Defaults to "qbit"
         """
 
+        n_torrents_added = 0
+
         for srg, srg_item in torrent_dict.items():
 
             self.logger.info(
@@ -300,7 +302,7 @@ class SeaDexArr:
                 else:
                     raise ValueError(f"Unsupported torrent client {torrent_client}")
 
-                if success:
+                if success == "torrent_added":
                     self.logger.info(
                         left_aligned_string(f"   Added {parsed_url} to {torrent_client}",
                                             total_length=self.log_line_length,
@@ -310,14 +312,22 @@ class SeaDexArr:
                     # Increment the number of torrents added, and if we've hit the limit then
                     # jump out
                     self.torrents_added += 1
+                    n_torrents_added += 1
                     if self.max_torrents_to_add is not None:
                         if self.torrents_added >= self.max_torrents_to_add:
                             return True
 
+                elif success == "torrent_already_added":
+                    self.logger.info(
+                        left_aligned_string(f"   Torrent already in {torrent_client}",
+                                            total_length=self.log_line_length,
+                                            )
+                    )
+
                 else:
                     raise ValueError(f"Cannot handle torrent client {torrent_client}")
 
-        return True
+        return n_torrents_added
 
     def add_torrent_to_qbit(self,
                             url,
@@ -342,7 +352,7 @@ class SeaDexArr:
                                total_length=self.log_line_length,
                                )
             )
-            return True
+            return "torrent_already_added"
 
         # Add the torrent
         result = self.qbit.torrents_add(urls=torrent_url,
@@ -351,4 +361,4 @@ class SeaDexArr:
         if result != "Ok.":
             raise Exception("Failed to add torrent")
 
-        return True
+        return "torrent_added"

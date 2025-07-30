@@ -343,14 +343,17 @@ class SeaDexSonarr(SeaDexArr):
                     # If we've got stuff, time to do something!
                     if len(fields) > 0:
 
+                        # Keep track of how many torrents we've added
+                        n_torrents_added = 0
+
                         # Add torrents to qBittorrent
                         if self.qbit is not None:
-                            self.add_torrent(torrent_dict=seadex_dict,
-                                             torrent_client="qbit",
-                                             )
+                            n_torrents_added += self.add_torrent(torrent_dict=seadex_dict,
+                                                                 torrent_client="qbit",
+                                                                 )
 
-                        # Push a message to Discord
-                        if self.discord_url is not None:
+                        # Push a message to Discord if we've added anything
+                        if self.discord_url is not None and n_torrents_added > 0:
                             discord_push(
                                 url=self.discord_url,
                                 arr_title=sonarr_title,
