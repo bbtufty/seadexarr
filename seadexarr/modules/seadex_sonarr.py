@@ -45,69 +45,29 @@ def get_tvdb_season(mapping):
 class SeaDexSonarr(SeaDexArr):
 
     def __init__(self,
-                 sonarr_url,
-                 sonarr_api_key,
-                 qbit_info=None,
-                 torrent_category=None,
-                 max_torrents_to_add=None,
-                 discord_url=None,
-                 public_only=True,
-                 prefer_dual_audio=True,
-                 want_best=True,
-                 anime_mappings=None,
-                 anidb_mappings=None,
-                 sleep_time=2,
-                 cache_time=1,
-                 interactive=False,
-                 log_level="INFO",
+                 config="config.yml"
                  ):
         """Sync Sonarr instance with SeaDex
 
         Args:
-            sonarr_url (str): URL for Sonarr instance
-            sonarr_api_key (str): API key for Sonarr instance
-            qbit_info (dict): Dictionary of qBit info
-            torrent_category (str): Torrent category for sonarr.
-                Defaults to None
-            public_only (bool): Whether to only return URLs for public torrents.
-                Defaults to True
-            prefer_dual_audio (bool): Whether to prefer dual audio torrents.
-                Defaults to True
-            want_best (bool): Whether to return only torrents marked as best.
-                Defaults to True
-            anime_mappings (dict): Custom mappings between TVDB/TMDB/AniList.
-                Defaults to None, which will use the default mappings
-                from Kometa (https://github.com/Kometa-Team/Anime-IDs)
-            anidb_mappings (dict): Custom mappings between TVDB/TMDB/AniDB.
-                Defaults to None, which will use the default mappings
-                from https://github.com/Anime-Lists/anime-lists/
-            sleep_time (float): Time to wait, in seconds, between requests, to avoid
-                hitting API rate limits. Defaults to 0 seconds (no sleep).
-            cache_time (float): Cache time for files that provide mappings.
-                Defaults to 1 day
-            interactive (bool): Whether to run in interactive mode.
-            log_level (str): Logging level. Defaults to INFO.
+            config (str, optional): Path to config file.
+                Defaults to "config.yml".
         """
 
         SeaDexArr.__init__(self,
-                           qbit_info=qbit_info,
-                           torrent_category=torrent_category,
-                           max_torrents_to_add=max_torrents_to_add,
-                           discord_url=discord_url,
-                           public_only=public_only,
-                           prefer_dual_audio=prefer_dual_audio,
-                           want_best=want_best,
-                           anime_mappings=anime_mappings,
-                           anidb_mappings=anidb_mappings,
-                           sleep_time=sleep_time,
-                           cache_time=cache_time,
-                           interactive=interactive,
-                           log_level=log_level,
+                           arr="sonarr",
+                           config=config,
                            )
 
         # Set up Sonarr
-        self.sonarr_url = sonarr_url
-        self.sonarr_api_key = sonarr_api_key
+        self.sonarr_url = self.config.get("sonarr_url", None)
+        if not self.sonarr_url:
+            raise ValueError(f"sonarr_url needs to be defined in {config}")
+
+        self.sonarr_api_key = self.config.get("sonarr_api_key", None)
+        if not self.sonarr_api_key:
+            raise ValueError(f"sonarr_api_key needs to be defined in {config}")
+
         self.sonarr = SonarrAPI(url=self.sonarr_url,
                                 apikey=self.sonarr_api_key,
                                 )

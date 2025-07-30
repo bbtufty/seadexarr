@@ -37,6 +37,7 @@ dependencies = [
     "pynyaa == 2.0.0",
     "qbittorrent-api == 2025.7.0",
     "requests == 2.32.4",
+    "ruamel.yaml == 0.18.14",
     "seadex == 0.7.1",
 ]
 

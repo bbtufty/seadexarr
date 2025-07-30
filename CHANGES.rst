@@ -1,6 +1,7 @@
 0.1.1 (Unreleased)
 ==================
 
+- Move to config files, to make the call simpler
 - Fix crash if torrent in list but not already downloaded
 
 0.1.0 (2025-07-22)

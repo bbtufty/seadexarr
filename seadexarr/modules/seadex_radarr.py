@@ -14,69 +14,29 @@ from .seadex_arr import SeaDexArr
 class SeaDexRadarr(SeaDexArr):
 
     def __init__(self,
-                 radarr_url,
-                 radarr_api_key,
-                 qbit_info=None,
-                 torrent_category=None,
-                 max_torrents_to_add=None,
-                 discord_url=None,
-                 public_only=True,
-                 prefer_dual_audio=True,
-                 want_best=True,
-                 anime_mappings=None,
-                 anidb_mappings=None,
-                 sleep_time=2,
-                 cache_time=1,
-                 interactive=False,
-                 log_level="INFO",
+                 config="config.yml"
                  ):
         """Sync Radarr instance with SeaDex
 
         Args:
-            radarr_url (str): URL for Radarr instance
-            radarr_api_key (str): API key for Radarr instance
-            qbit_info (dict): Dictionary of qBit info
-            torrent_category (str): Torrent category for Radarr.
-                Defaults to None
-            public_only (bool): Whether to only return URLs for public torrents.
-                Defaults to True
-            prefer_dual_audio (bool): Whether to prefer dual audio torrents.
-                Defaults to True
-            want_best (bool): Whether to return only torrents marked as best.
-                Defaults to True
-            anime_mappings (dict): Custom mappings between TMDB/AniList.
-                Defaults to None, which will use the default mappings
-                from Kometa (https://github.com/Kometa-Team/Anime-IDs)
-            anidb_mappings (dict): Custom mappings between TMDB/AniDB.
-                Defaults to None, which will use the default mappings
-                from https://github.com/Anime-Lists/anime-lists/
-            sleep_time (float): Time to wait, in seconds, between requests, to avoid
-                hitting API rate limits. Defaults to 0 seconds (no sleep).
-            cache_time (float): Cache time for files that provide mappings.
-                Defaults to 1 day
-            interactive (bool): Whether to run in interactive mode.
-            log_level (str): Logging level. Defaults to INFO.
+            config (str, optional): Path to config file.
+                Defaults to "config.yml".
         """
 
         SeaDexArr.__init__(self,
-                           qbit_info=qbit_info,
-                           torrent_category=torrent_category,
-                           max_torrents_to_add=max_torrents_to_add,
-                           discord_url=discord_url,
-                           public_only=public_only,
-                           prefer_dual_audio=prefer_dual_audio,
-                           want_best=want_best,
-                           anime_mappings=anime_mappings,
-                           anidb_mappings=anidb_mappings,
-                           sleep_time=sleep_time,
-                           cache_time=cache_time,
-                           interactive=interactive,
-                           log_level=log_level,
+                           arr="radarr",
+                           config=config,
                            )
 
         # Set up Radarr
-        self.radarr_url = radarr_url
-        self.radarr_api_key = radarr_api_key
+        self.radarr_url = self.config.get("radarr_url", None)
+        if not self.radarr_url:
+            raise ValueError(f"radarr_url needs to be defined in {config}")
+
+        self.radarr_api_key = self.config.get("radarr_api_key", None)
+        if not self.radarr_api_key:
+            raise ValueError(f"radarr_api_key needs to be defined in {config}")
+
         self.radarr = RadarrAPI(url=self.radarr_url,
                                 apikey=self.radarr_api_key,
                                 )
