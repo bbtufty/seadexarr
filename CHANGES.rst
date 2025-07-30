@@ -1,6 +1,7 @@
 0.3.1 (Unreleased)
 ==================
 
+- Better handle Discord notifications and log messages when torrent already in client
 - Map potentially weird episodes SeaDexSonarr if in Season 0 (Specials)
 
 0.3.0 (2025-07-30)
