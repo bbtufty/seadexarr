@@ -30,13 +30,16 @@ services:
   seadexarr:
     image: ghcr.io/bbtufty/seadexarr:latest
     container_name: seadexarr
+    environment: 
+      - SCHEDULE_TIME=6  # How often to run, in hours
     volumes:
       - /path/to/config:/config
-    restart: "no"
+    restart: unless-stopped
 ```
 
-and can then be run like `docker-compose run seadexarr --arr radarr` (swap out radarr for sonarr depending on what
-you want to do).
+And then to run on a schedule, simply run `docker-compose up -d seadexarr`. If you want to run one Arr one time, you 
+can instead run like `docker-compose run seadexarr --arr radarr` (swap out radarr for sonarr depending on which you
+want to run).
 
 SeaDexArr can also be installed via pip:
 
