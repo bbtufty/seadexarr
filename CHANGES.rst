@@ -1,3 +1,8 @@
+0.3.1 (Unreleased)
+==================
+
+- Map potentially weird episodes SeaDexSonarr if in Season 0 (Specials)
+
 0.3.0 (2025-07-30)
 ==================
 

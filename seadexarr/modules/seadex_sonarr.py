@@ -530,9 +530,10 @@ class SeaDexSonarr(SeaDexArr):
                                                  )
 
         # Potentially pull out a bunch of mappings from AniDB. These should
-        # be for anything not marked as TV
+        # be for anything not marked as TV, and specials as marked by
+        # being in Season 0
         anidb_mapping_dict = {}
-        if al_format not in ["TV"]:
+        if al_format not in ["TV"] or tvdb_season == 0:
             anidb_item = self.anidb_mappings.findall(f"anime[@anidbid='{anidb_id}']")
 
             # If we don't find anything, no worries. If we find multiple, worries
@@ -541,7 +542,11 @@ class SeaDexSonarr(SeaDexArr):
 
             if len(anidb_item) == 1:
                 anidb_item = anidb_item[0]
+
+                # We want things with mapping lists in, since more regular
+                # mappings will have already been picked up
                 anidb_mapping_list = anidb_item.findall("mapping-list")
+
                 if len(anidb_mapping_list) > 0:
                     for ms in anidb_mapping_list:
                         m = ms.findall("mapping")
