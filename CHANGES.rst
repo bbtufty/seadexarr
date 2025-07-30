@@ -1,4 +1,4 @@
-0.2.0 (Unreleased)
+0.2.0 (2025-07-30)
 ==================
 
 - Add Docker support
