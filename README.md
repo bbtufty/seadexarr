@@ -22,7 +22,23 @@ out there.
 
 ## Installation
 
-SeaDexArr can be installed via pip:
+SeaDexArr is available as a Docker container. Into a docker-compose file:
+
+```
+services:
+
+  seadexarr:
+    image: ghcr.io/bbtufty/seadexarr:latest
+    container_name: seadexarr
+    volumes:
+      - /path/to/config:/config
+    restart: "no"
+```
+
+and can then be run like `docker-compose run seadexarr --arr radarr` (swap out radarr for sonarr depending on what
+you want to do).
+
+SeaDexArr can also be installed via pip:
 
 ```
 pip install seadexarr
@@ -105,6 +121,7 @@ description of each is given below.
 
 ## Roadmap
 
+- Support for scheduled runs with Docker
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
 - Support for other torrent clients

@@ -42,8 +42,7 @@ class SeaDexArr:
         config_template_path = os.path.join(os.path.dirname(f_path), "config_sample.yml")
         if not os.path.exists(config):
             shutil.copy(config_template_path, config)
-
-            raise FileNotFoundError(f"{config} not found. Copying template to current directory.")
+            raise FileNotFoundError(f"{config} not found. Copying template")
 
         with open(config, "r") as f:
             self.config = YAML().load(f)
