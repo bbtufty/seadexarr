@@ -1,11 +1,13 @@
 import copy
 import json
 import os
+import shutil
 from datetime import datetime
 from urllib.request import urlretrieve
 from xml.etree import ElementTree
 
 import qbittorrentapi
+from ruamel.yaml import YAML
 from seadex import SeaDexEntry
 
 from .log import setup_logger, centred_string, left_aligned_string
@@ -14,68 +16,50 @@ from .torrent import get_nyaa_url
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
 
+ALLOWED_ARRS = [
+    "radarr",
+    "sonarr",
+]
+
 class SeaDexArr:
 
     def __init__(self,
-                 qbit_info=None,
-                 torrent_category=None,
-                 max_torrents_to_add=None,
-                 discord_url=None,
-                 public_only=True,
-                 prefer_dual_audio=True,
-                 want_best=True,
-                 anime_mappings=None,
-                 anidb_mappings=None,
-                 sleep_time=2,
-                 cache_time=1,
-                 interactive=False,
-                 log_level="INFO",
+                 arr="sonarr",
+                 config="config.yml",
                  ):
         """Base class for SeaDexArr instances
 
         Args:
-            qbit_info (dict): Dictionary of qBit info
-            torrent_category (str): Torrent category for particular arr.
-                Defaults to None
-            public_only (bool): Whether to only return URLs for public torrents.
-                Defaults to True
-            prefer_dual_audio (bool): Whether to prefer dual audio torrents.
-                Defaults to True
-            want_best (bool): Whether to return only torrents marked as best.
-                Defaults to True
-            anime_mappings (dict): Custom mappings between TVDB/TMDB/AniList.
-                Defaults to None, which will use the default mappings
-                from Kometa (https://github.com/Kometa-Team/Anime-IDs)
-            anidb_mappings (dict): Custom mappings between TVDB/TMDB/AniDB.
-                Defaults to None, which will use the default mappings
-                from https://github.com/Anime-Lists/anime-lists/
-            sleep_time (float): Time to wait, in seconds, between requests, to avoid
-                hitting API rate limits. Defaults to 0 seconds (no sleep).
-            cache_time (float): Cache time for files that provide mappings.
-                Defaults to 1 day
-            interactive (bool): Whether to run in interactive mode.
-            log_level (str): Logging level. Defaults to INFO.
+            arr (str, optional): Which Arr is being run.
+                Defaults to "sonarr".
+            config (str, optional): Path to config file.
+                Defaults to "config.yml".
         """
 
-        self.cache_time = cache_time
+        # If we don't have a config file, copy the sample to the current
+        # working directory
+        f_path = copy.deepcopy(__file__)
+        config_template_path = os.path.join(os.path.dirname(f_path), "config_sample.yml")
+        if not os.path.exists(config):
+            shutil.copy(config_template_path, config)
 
-        # Get the mapping files
-        if anime_mappings is None:
-            anime_mappings = self.get_anime_mappings()
-        if anidb_mappings is None:
-            anidb_mappings = self.get_anidb_mappings()
+            raise FileNotFoundError(f"{config} not found. Copying template to current directory.")
 
-        self.anime_mappings = anime_mappings
-        self.anidb_mappings = anidb_mappings
+        with open(config, "r") as f:
+            self.config = YAML().load(f)
 
-        # Instantiate the SeaDex API
-        self.seadex = SeaDexEntry()
-
-        # Set up torrent-related stuff
+        # Check the config has all the same keys as the sample, if not add 'em in
+        self.verify_config(config_path=config,
+                           config_template_path=config_template_path,
+                           )
 
         # qBit
         self.qbit = None
-        if qbit_info is not None:
+        qbit_info = self.config.get("qbit_info", None)
+
+        # Check we've got everything we need
+        qbit_info_provided = all([qbit_info.get(key, None) is not None for key in qbit_info])
+        if qbit_info_provided:
             qbit = qbittorrentapi.Client(**qbit_info)
 
             # Ensure this works
@@ -86,31 +70,80 @@ class SeaDexArr:
 
             self.qbit = qbit
 
-        # Hooks between torrents and Arrs, and torrent number
-        # bookkeeping
-        self.torrent_category = torrent_category
-        self.max_torrents_to_add = max_torrents_to_add
+        # Hooks between torrents and Arrs, and torrent number bookkeeping
+        self.torrent_category = self.config.get(f"{arr}_torrent_category", None)
+        self.max_torrents_to_add = self.config.get("max_torrents_to_add", None)
         self.torrents_added = 0
 
         # Discord
-        self.discord_url = discord_url
+        self.discord_url = self.config.get("discord_url", None)
+
+        # Flags for filtering torrents
+        self.public_only = self.config.get("public_only", True)
+        self.prefer_dual_audio = self.config.get("prefer_dual_audio", True)
+        self.want_best = self.config.get("want_best", True)
+
+        # Advanced settings
+        self.sleep_time = self.config.get("sleep_time", 2)
+        self.cache_time = self.config.get("cache_time", 1)
+
+        # Get the mapping files
+        anime_mappings = self.config.get("anime_mappings", None)
+        anidb_mappings = self.config.get("anidb_mappings", None)
+
+        if anime_mappings is None:
+            anime_mappings = self.get_anime_mappings()
+        if anidb_mappings is None:
+            anidb_mappings = self.get_anidb_mappings()
+        self.anime_mappings = anime_mappings
+        self.anidb_mappings = anidb_mappings
+
+        self.interactive = self.config.get("interactive", False)
+        log_level = self.config.get("log_level", "INFO")
+        self.logger = setup_logger(log_level=log_level)
+
+        # Instantiate the SeaDex API
+        self.seadex = SeaDexEntry()
 
         # Set up cache for AL API calls
         self.al_cache = {}
 
-        # Flags for filtering torrents
-        self.public_only = public_only
-        self.prefer_dual_audio = prefer_dual_audio
-        self.want_best = want_best
-
-        self.interactive = interactive
-
-        self.sleep_time = sleep_time
-
-        self.logger = setup_logger(log_level=log_level)
-
         self.log_line_sep = "="
         self.log_line_length = 80
+
+    def verify_config(self,
+                      config_path,
+                      config_template_path,
+                      ):
+        """Verify all the keys in the current config file match those in the template
+
+        Args:
+            config_path (str): Path to config file
+            config_template_path (str): Path to config template
+        """
+
+        with open(config_template_path, "r") as f:
+            config_template = YAML().load(f)
+
+        anything_changed = False
+
+        # Loop over keys in the config template, add any missing
+        for key in config_template:
+            if key not in self.config:
+                self.config[key] = config_template[key]
+                anything_changed = True
+
+        # Loop over keys in the config file, remove any that aren't
+        # in the template
+        for key in self.config:
+            if key not in config_template:
+                del self.config[key]
+                anything_changed = True
+
+        # Save out if anything's changed
+        if anything_changed:
+            with open(config_path, "w+") as f:
+                YAML().dump(self.config, f)
 
     def get_anime_mappings(self):
         """Get the anime IDs file"""

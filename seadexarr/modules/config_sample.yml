@@ -1,0 +1,36 @@
+# Parameters for Sonarr
+sonarr_url:
+sonarr_api_key:
+
+# Parameters for Radarr
+radarr_url:
+radarr_api_key:
+
+# qBittorrent parameters
+qbit_info:
+  host:
+  username:
+  password:
+
+# Categories for added torrents
+sonarr_torrent_category:
+radarr_torrent_category:
+
+# Maximum number of torrents to add in one run
+max_torrents_to_add:
+
+# Discord webhook URL
+discord_url:
+
+# SeaDex filters
+public_only: true
+prefer_dual_audio: true
+want_best: true
+
+# Advanced settings
+sleep_time: 2
+cache_time: 1
+interactive: false
+anime_mappings:
+anidb_mappings:
+log_level: "INFO"

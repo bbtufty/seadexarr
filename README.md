@@ -38,94 +38,70 @@ pip install -e .
 
 ## Usage
 
-To run SeaDexArr for Sonarr, the Python code is pretty short:
+To run SeaDexArr, the Python code is simple:
 
 ```
-from seadexarr import SeaDexSonarr
+from seadexarr import SeaDexSonarr, SeaDexRadarr
 
-sonarr_url = "your-sonarr-url:8989"
-sonarr_api_key = "abcdefg12345"
-
-sds = SeaDexSonarr(sonarr_url=sonarr_url, 
-                   sonarr_api_key=sonarr_api_key
-                   )
+sds = SeaDexSonarr()
 sds.run()
-```
 
-Radarr works much the same:
-
-```
-from seadexarr import SeaDexRadarr
-
-radarr_url = "your-radarr-url:7878"
-radarr_api_key = "abcdefg12345"
-
-sdr = SeaDexRadarr(radarr_url=radarr_url, 
-                   radarr_api_key=radarr_api_key
-                   )
+sdr = SeaDexRadarr()
 sdr.run()
 ```
 
-If you want to use Discord notifications (recommended), then set up a webhook following 
-[this guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and add the URL into the call:
+On the first run, the code will generate a config file in your working directory. This should be populated to your own 
+preference, and then run the code again.
 
-```
-from seadex_sonarr import SeaDexSonarr
+## Config
 
-sonarr_url = "your-sonarr-url:8989"
-sonarr_api_key = "abcdefg12345"
-discord_url = "https://discord.com/api/webhooks/abcde12345"
+There are a number of configuration settings to play around with. These should be self-explanatory, but a more detailed
+description of each is given below.
 
-sds = SeaDexSonarr(sonarr_url=sonarr_url, 
-                   sonarr_api_key=sonarr_api_key,
-                   discord_url=discord_url,
-                   )
-sds.run()
-```
+### Arr settings
 
-## Adding torrents to client
+- `sonarr_url`: URL for Sonarr. Required if running SeaDexSonarr
+- `sonarr_api_key`: API key for Sonarr (Settings/General/API Key). Required if running SeaDexSonarr
 
-SeaDexArr has support for adding torrents automatically (current only for Nyaa torrents, and qBittorrent). To do
-this, add qBittorrent connection info, and ideally the Arr torrent category to the function call:
+- `radarr_url`: URL for Radarr. Required if running SeaDexRadarr
+- `radarr_api_key`: API key for Radarr (Settings/General/API Key). Required if running SeaDexRadarr
 
-```
-...
+### Torrent settings
 
-qbit_info = {
-    "host": "http://localhost:8080",
-    "username": "username",
-    "password": "password",
-}
-torrent_category = "sonarr"  # or "radarr", for radarr instances
-
-sds = SeaDexSonarr(sonarr_url=sonarr_url, 
-                   sonarr_api_key=sonarr_api_key,
-                   qbit_info=qbit_info,
-                   torrent_category=torrent_category,
-                   )
-sds.run()
-```
-
-## Advanced Settings
-
-There are a number of switches you can use to filter down what SeaDex-Sonarr returns as the "best" option for you. These 
-are:
-
-- `public_only` (defaults to True), will only return results from public trackers
-- `prefer_dual_audio` (defaults to True) will prefer results tagged as dual audio, if any exist
-- `want_best` (defaults to True) will prefer results tagged as best, if any exist
-
-There are also some torrent-related settings:
-
-- `torrent_category` should be set to your Sonarr/Radarr import category, if you have one
-- `max_torrents_to_add` can be used to limit the number of torrents you add in one run. Defaults to None, which 
+- `qbit_info`: Details for qBittorrent. This requires a host URL, username, and password to be set. 
+   Required if using qBittorrent
+- `sonarr_torrent_category`: Sonarr torrent import category, if you have one. Defaults to None, which won't 
+   set a category
+- `radarr_torrent_category`: Radarr torrent import category, if you have one. Defaults to None, which won't 
+   set a category
+- `max_torrents_to_add`: used to limit the number of torrents you add in one run. Defaults to None, which 
    will just add everything it finds
 
-And some more general settings:
+### Discord settings
 
-- `interactive` (defaults to False). If True, will enable interactive mode, which when multiple torrent options are
-   found, will ask for input to choose one. Otherwise, will just grab everything
-- `log_level` (defaults to INFO), controls the level of logging. Can be WARNING, INFO, or DEBUG
+- `discord_url`: If you want to use Discord notifications (recommended), then set up a webhook following 
+   [this guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and add the URL
+   here. Defaults to None, which won't use the Discord integration
+
+### SeaDex filters
+
+- `public_only`: Will only return results from public trackers. Defaults to True
+- `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. Defaults to True
+- `want_best`: Prefer results tagged as best, if any exist. Defaults to True
+
+### Advanced settings
+
+- `sleep_time`: To avoid hitting API rate limits, after each query SeaDexArr will wait a number 
+   of seconds. Defaults to 2
+- `cache_time`: The mappings files don't change all the time, so are cached for a certain number
+   of days. Defaults to 1
+- `interactive`: If True, will enable interactive mode, which when multiple torrent options are
+   found, will ask for input to choose one. Otherwise, will just grab everything. Defaults to False
+- `anime_mappings`: Can provide custom mappings here. Otherwise, will use the Kometa mappings.
+  The general user should not set this. Defaults to None
+- `anidb_mappings`: Can provide custom mappings here. Otherwise, will use the AniDB mappings.
+  The general user should not set this. Defaults to None
+- `log_level`: Controls the level of logging. Can be WARNING, INFO, or DEBUG. Defaults to "INFO"
 
 ## Roadmap
 
