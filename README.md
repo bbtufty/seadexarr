@@ -124,7 +124,6 @@ description of each is given below.
 
 ## Roadmap
 
-- Support for scheduled runs with Docker
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
 - Support for other torrent clients
