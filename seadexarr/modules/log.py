@@ -6,8 +6,8 @@ import colorlog
 
 
 def setup_logger(
-        log_level,
-        log_name="seadex_sonarr",
+    log_level,
+    log_name="seadex_sonarr",
 ):
     """
     Set up the logger.
@@ -61,9 +61,9 @@ def setup_logger(
 
 
 def centred_string(
-        str_to_centre,
-        total_length=80,
-        str_prefix="",
+    str_to_centre,
+    total_length=80,
+    str_prefix="",
 ):
     """Centre string for a logger
 
@@ -81,9 +81,9 @@ def centred_string(
 
 
 def left_aligned_string(
-        str_to_align,
-        total_length=80,
-        str_prefix="",
+    str_to_align,
+    total_length=80,
+    str_prefix="",
 ):
     """Left-align string for a logger
 
