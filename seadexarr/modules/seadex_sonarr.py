@@ -89,8 +89,9 @@ class SeaDexSonarr(SeaDexArr):
         # Now start looping over these series, finding any potential mappings
         for sonarr_idx, sonarr_series in enumerate(all_sonarr_series):
 
-            # Pull Sonarr/TVDB info out
+            # Pull Sonarr and database info out
             tvdb_id = sonarr_series.tvdbId
+            imdb_id = sonarr_series.imdbId
             sonarr_title = sonarr_series.title
             sonarr_series_id = sonarr_series.id
 
@@ -102,7 +103,10 @@ class SeaDexSonarr(SeaDexArr):
             )
 
             # Get the mappings from the Sonarr series to AniList
-            al_mappings = self.get_anilist_ids(tvdb_id=tvdb_id)
+            al_mappings = self.get_anilist_ids(
+                tvdb_id=tvdb_id,
+                imdb_id=imdb_id,
+            )
 
             if len(al_mappings) == 0:
                 self.log_no_anilist_mappings(title=sonarr_title)
@@ -245,18 +249,34 @@ class SeaDexSonarr(SeaDexArr):
         return True
 
     def get_all_sonarr_series(self):
-        """Get all series in Sonarr tagged as anime"""
+        """Get all series in Sonarr with AniList mapping info"""
 
-        # Get a list of everything marked as type Anime in the Sonarr instance
         sonarr_series = []
 
-        for s in self.sonarr.all_series():
-            sonarr_series_type = s.seriesType
+        # Search through TVDB and IMDb IDs
+        all_tvdb_ids = [
+            self.anime_mappings[x].get("tvdb_id", None)
+            for x in self.anime_mappings
+            if "tvdb_id" in self.anime_mappings[x].keys()
+        ]
 
-            if sonarr_series_type == "anime":
+        all_imdb_ids = [
+            self.anime_mappings[x].get("imdb_id", None)
+            for x in self.anime_mappings
+            if "imdb_id" in self.anime_mappings[x].keys()
+        ]
+
+        for s in self.sonarr.all_series():
+
+            # Check by TVDB IDs
+            tvdb_id = s.tvdbId
+            if tvdb_id in all_tvdb_ids and s not in sonarr_series:
                 sonarr_series.append(s)
 
-        sonarr_series.sort(key=lambda x: x.title)
+            # Check by IMDb IDs
+            imdb_id = s.imdbId
+            if imdb_id in all_imdb_ids and s not in sonarr_series:
+                sonarr_series.append(s)
 
         return sonarr_series
 

@@ -266,32 +266,54 @@ class SeaDexArr:
         self,
         tvdb_id=None,
         tmdb_id=None,
+        imdb_id=None,
+        tmdb_type="movie",
     ):
         """Get a list of entries that match on TVDB ID
 
         Args:
             tvdb_id (int): TVDB ID
             tmdb_id (int): TMDB ID
+            imdb_id (int): IMDb ID
+            tmdb_type (str): TMDB type. Can be "movie" or "show"
         """
 
-        if tvdb_id is None and tmdb_id is None:
-            raise ValueError("Either tvdb_id or tmdb_id must be specified")
-        if tvdb_id is not None and tmdb_id is not None:
-            raise ValueError("Only one of tvdb_id and tmdb_id should be specified")
+        if tmdb_type not in ["movie", "show"]:
+            raise ValueError("tmdb_type must be 'movie' or 'show'")
+
+        # Check we have exactly one ID specified here
+        non_none_sum = sum(v is not None for v in [tvdb_id, tmdb_id, imdb_id])
+
+        if non_none_sum == 0:
+            raise ValueError(
+                "At least one of tvdb_id, tmdb_id, and imdb_id must be provided"
+            )
 
         anilist_mappings = {}
         if tvdb_id is not None:
-            anilist_mappings = {
-                n: m
-                for n, m in self.anime_mappings.items()
-                if m.get("tvdb_id", None) == tvdb_id
-            }
-        elif tmdb_id is not None:
-            anilist_mappings = {
-                n: m
-                for n, m in self.anime_mappings.items()
-                if m.get("tmdb_movie_id", None) == tmdb_id
-            }
+            anilist_mappings.update(
+                {
+                    n: m
+                    for n, m in self.anime_mappings.items()
+                    if m.get("tvdb_id", None) == tvdb_id
+                }
+            )
+        if tmdb_id is not None:
+            anilist_mappings.update(
+                {
+                    n: m
+                    for n, m in self.anime_mappings.items()
+                    if m.get(f"tmdb_{tmdb_type}_id", None) == tmdb_id
+                }
+            )
+        if imdb_id is not None:
+            anilist_mappings.update(
+                {
+                    n: m
+                    for n, m in self.anime_mappings.items()
+                    if m.get("imdb_id", None) == imdb_id
+                }
+            )
 
         # Filter out anything without an AniList ID
         anilist_mappings = {
@@ -342,11 +364,15 @@ class SeaDexArr:
         final_torrent_list = copy.deepcopy(sd_entry.torrents)
 
         # Filter down by allowed trackers
-        final_torrent_list = [t for t in final_torrent_list if t.tracker.lower() in self.trackers]
+        final_torrent_list = [
+            t for t in final_torrent_list if t.tracker.lower() in self.trackers
+        ]
 
         # Filtering down to only public torrents
         if self.public_only:
-            final_torrent_list = [t for t in final_torrent_list if t.tracker.is_public()]
+            final_torrent_list = [
+                t for t in final_torrent_list if t.tracker.is_public()
+            ]
 
         # Pull out torrents tagged as best, so long as at least one
         # is tagged as best
@@ -372,7 +398,7 @@ class SeaDexArr:
 
             seadex_release_groups[t.release_group]["url"][t.url] = {
                 "url": t.url,
-                "tracker": t.tracker.name,
+                "tracker": t.tracker,
                 "hash": t.infohash,
             }
         return seadex_release_groups
@@ -538,7 +564,7 @@ class SeaDexArr:
 
                 # If we don't have a tracker from our list selected, then
                 # get out of here
-                if tracker not in self.trackers:
+                if tracker.lower() not in self.trackers:
                     self.logger.info(
                         left_aligned_string(
                             f"   Skipping {url} as tracker {tracker} not in selected list",

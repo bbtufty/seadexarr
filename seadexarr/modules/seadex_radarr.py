@@ -53,8 +53,9 @@ class SeaDexRadarr(SeaDexArr):
         # Now start looping over these movies
         for radarr_idx, radarr_movie in enumerate(all_radarr_movies):
 
-            # Pull Radarr/TMDB info out
+            # Pull Radarr and database info out
             tmdb_id = radarr_movie.tmdbId
+            imdb_id = radarr_movie.imdbId
             radarr_title = radarr_movie.title
             radarr_movie_id = radarr_movie.id
 
@@ -66,7 +67,11 @@ class SeaDexRadarr(SeaDexArr):
             )
 
             # Get the mappings from the Radarr movies to AniList
-            al_mappings = self.get_anilist_ids(tmdb_id=tmdb_id)
+            al_mappings = self.get_anilist_ids(
+                tmdb_id=tmdb_id,
+                imdb_id=imdb_id,
+                tmdb_type="movie",
+            )
 
             if len(al_mappings) == 0:
                 self.log_no_anilist_mappings(title=radarr_title)
@@ -204,18 +209,31 @@ class SeaDexRadarr(SeaDexArr):
     def get_all_radarr_movies(self):
         """Get all movies in Radarr that have an associated AniDB ID"""
 
-        # Get a list of all movies
         radarr_movies = []
 
+        # Search through TMDB and IMDb IDs
         all_tmdb_ids = [
             self.anime_mappings[x].get("tmdb_movie_id", None)
             for x in self.anime_mappings
             if "tmdb_movie_id" in self.anime_mappings[x].keys()
         ]
 
+        all_imdb_ids = [
+            self.anime_mappings[x].get("imdb_id", None)
+            for x in self.anime_mappings
+            if "imdb_id" in self.anime_mappings[x].keys()
+        ]
+
         for m in self.radarr.all_movies():
+
+            # Check by TMDB IDs
             tmdb_id = m.tmdbId
-            if tmdb_id in all_tmdb_ids:
+            if tmdb_id in all_tmdb_ids and m not in radarr_movies:
+                radarr_movies.append(m)
+
+            # Check by IMDb IDs
+            imdb_id = m.imdbId
+            if imdb_id in all_imdb_ids and m not in radarr_movies:
                 radarr_movies.append(m)
 
         radarr_movies.sort(key=lambda x: x.title)
