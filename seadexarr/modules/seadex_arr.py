@@ -22,6 +22,23 @@ ALLOWED_ARRS = [
     "sonarr",
 ]
 
+PUBLIC_TRACKERS = [
+    "Nyaa",
+    "AnimeTosho",
+    "AniDex",
+    "RuTracker",
+]
+
+PRIVATE_TRACKERS = [
+    "AB",
+    "BeyondHD",
+    "PassThePopcorn",
+    "BroadcastTheNet",
+    "HDBits",
+    "Blutopia",
+    "Aither",
+]
+
 
 class SeaDexArr:
 
@@ -90,6 +107,17 @@ class SeaDexArr:
         self.prefer_dual_audio = self.config.get("prefer_dual_audio", True)
         self.want_best = self.config.get("want_best", True)
 
+        trackers = self.config.get("trackers", None)
+
+        # If we don't have any trackers selected, build a list from public
+        # and private trackers
+        if trackers is None:
+            trackers = copy.deepcopy(PUBLIC_TRACKERS)
+            if not self.public_only:
+                trackers += copy.deepcopy(PRIVATE_TRACKERS)
+
+        self.trackers = [t.lower() for t in trackers]
+
         # Advanced settings
         self.sleep_time = self.config.get("sleep_time", 2)
         self.cache_time = self.config.get("cache_time", 1)
@@ -143,10 +171,13 @@ class SeaDexArr:
 
         # Loop over keys in the config file, remove any that aren't
         # in the template
+        keys_to_del = []
         for key in self.config:
             if key not in config_template:
-                del self.config[key]
+                keys_to_del.append(key)
                 anything_changed = True
+        for key in keys_to_del:
+            del self.config[key]
 
         # Save out if anything's changed
         if anything_changed:
@@ -308,13 +339,16 @@ class SeaDexArr:
             sd_entry: SeaDex API query
         """
 
-        # Start by potentially filtering down to only public ones
-        if self.public_only:
-            final_torrent_list = [t for t in sd_entry.torrents if t.tracker.is_public()]
-        else:
-            final_torrent_list = copy.deepcopy(sd_entry.torrents)
+        final_torrent_list = copy.deepcopy(sd_entry.torrents)
 
-        # Next, pull out ones tagged as best, so long as at least one
+        # Filter down by allowed trackers
+        final_torrent_list = [t for t in final_torrent_list if t.tracker.lower() in self.trackers]
+
+        # Filtering down to only public torrents
+        if self.public_only:
+            final_torrent_list = [t for t in final_torrent_list if t.tracker.is_public()]
+
+        # Pull out torrents tagged as best, so long as at least one
         # is tagged as best
         if self.want_best:
             any_best = any([t.is_best for t in final_torrent_list])
@@ -501,6 +535,17 @@ class SeaDexArr:
             for url in srg_item["url"]:
                 item_hash = srg_item["url"][url]["hash"]
                 tracker = srg_item["url"][url]["tracker"]
+
+                # If we don't have a tracker from our list selected, then
+                # get out of here
+                if tracker not in self.trackers:
+                    self.logger.info(
+                        left_aligned_string(
+                            f"   Skipping {url} as tracker {tracker} not in selected list",
+                            total_length=self.log_line_length,
+                        )
+                    )
+                    continue
 
                 # Nyaa
                 if tracker.lower() == "nyaa":
