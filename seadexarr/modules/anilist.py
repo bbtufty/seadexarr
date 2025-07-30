@@ -5,7 +5,7 @@ import requests
 API_URL = "https://graphql.anilist.co"
 
 # AniList query
-QUERY = '''
+QUERY = """
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
@@ -22,7 +22,7 @@ query ($id: Int) {
     format
   }
 }
-'''
+"""
 
 
 def get_query(al_id):
@@ -33,9 +33,7 @@ def get_query(al_id):
     """
 
     # Define query variables and values that will be used in the query request
-    variables = {
-        "id": al_id
-    }
+    variables = {"id": al_id}
 
     resp = requests.post(API_URL, json={"query": QUERY, "variables": variables})
     j = resp.json()
@@ -43,9 +41,10 @@ def get_query(al_id):
     return j
 
 
-def get_anilist_n_eps(al_id,
-                      al_cache=None,
-                      ):
+def get_anilist_n_eps(
+    al_id,
+    al_cache=None,
+):
     """Query AniList to get number of episodes for an anime.
 
     Args:
@@ -70,9 +69,10 @@ def get_anilist_n_eps(al_id,
     return n_eps, al_cache
 
 
-def get_anilist_title(al_id,
-                      al_cache=None,
-                      ):
+def get_anilist_title(
+    al_id,
+    al_cache=None,
+):
     """Query AniList to get title for an anime.
 
     Args:
@@ -99,9 +99,10 @@ def get_anilist_title(al_id,
     return title, al_cache
 
 
-def get_anilist_thumb(al_id,
-                      al_cache=None,
-                      ):
+def get_anilist_thumb(
+    al_id,
+    al_cache=None,
+):
     """Query AniList to get thumbnail URL for an anime.
 
     Args:
@@ -125,9 +126,10 @@ def get_anilist_thumb(al_id,
     return thumb, al_cache
 
 
-def get_anilist_format(al_id,
-                       al_cache=None,
-                       ):
+def get_anilist_format(
+    al_id,
+    al_cache=None,
+):
     """Query AniList to get format for an anime.
 
     Args:

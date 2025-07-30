@@ -8,8 +8,9 @@ from xml.etree import ElementTree
 
 import qbittorrentapi
 from ruamel.yaml import YAML
-from seadex import SeaDexEntry
+from seadex import SeaDexEntry, EntryNotFoundError
 
+from .anilist import get_anilist_title, get_anilist_thumb
 from .log import setup_logger, centred_string, left_aligned_string
 from .torrent import get_nyaa_url
 
@@ -21,12 +22,14 @@ ALLOWED_ARRS = [
     "sonarr",
 ]
 
+
 class SeaDexArr:
 
-    def __init__(self,
-                 arr="sonarr",
-                 config="config.yml",
-                 ):
+    def __init__(
+        self,
+        arr="sonarr",
+        config="config.yml",
+    ):
         """Base class for SeaDexArr instances
 
         Args:
@@ -39,7 +42,9 @@ class SeaDexArr:
         # If we don't have a config file, copy the sample to the current
         # working directory
         f_path = copy.deepcopy(__file__)
-        config_template_path = os.path.join(os.path.dirname(f_path), "config_sample.yml")
+        config_template_path = os.path.join(
+            os.path.dirname(f_path), "config_sample.yml"
+        )
         if not os.path.exists(config):
             shutil.copy(config_template_path, config)
             raise FileNotFoundError(f"{config} not found. Copying template")
@@ -48,16 +53,19 @@ class SeaDexArr:
             self.config = YAML().load(f)
 
         # Check the config has all the same keys as the sample, if not add 'em in
-        self.verify_config(config_path=config,
-                           config_template_path=config_template_path,
-                           )
+        self.verify_config(
+            config_path=config,
+            config_template_path=config_template_path,
+        )
 
         # qBit
         self.qbit = None
         qbit_info = self.config.get("qbit_info", None)
 
         # Check we've got everything we need
-        qbit_info_provided = all([qbit_info.get(key, None) is not None for key in qbit_info])
+        qbit_info_provided = all(
+            [qbit_info.get(key, None) is not None for key in qbit_info]
+        )
         if qbit_info_provided:
             qbit = qbittorrentapi.Client(**qbit_info)
 
@@ -110,10 +118,11 @@ class SeaDexArr:
         self.log_line_sep = "="
         self.log_line_length = 80
 
-    def verify_config(self,
-                      config_path,
-                      config_template_path,
-                      ):
+    def verify_config(
+        self,
+        config_path,
+        config_template_path,
+    ):
         """Verify all the keys in the current config file match those in the template
 
         Args:
@@ -150,9 +159,10 @@ class SeaDexArr:
         anime_mappings_file = os.path.join("anime_ids.json")
 
         # If a file doesn't exist, get it
-        self.get_external_mappings(f=anime_mappings_file,
-                                   url=ANIME_IDS_URL,
-                                   )
+        self.get_external_mappings(
+            f=anime_mappings_file,
+            url=ANIME_IDS_URL,
+        )
 
         with open(anime_mappings_file, "r") as f:
             anime_mappings = json.load(f)
@@ -165,18 +175,20 @@ class SeaDexArr:
         anidb_mappings_file = os.path.join("anime-list-master.xml")
 
         # If a file doesn't exist, get it
-        self.get_external_mappings(f=anidb_mappings_file,
-                                   url=ANIDB_MAPPINGS_URL,
-                                   )
+        self.get_external_mappings(
+            f=anidb_mappings_file,
+            url=ANIDB_MAPPINGS_URL,
+        )
 
         anidb_mappings = ElementTree.parse(anidb_mappings_file).getroot()
 
         return anidb_mappings
 
-    def get_external_mappings(self,
-                              f,
-                              url,
-                              ):
+    def get_external_mappings(
+        self,
+        f,
+        url,
+    ):
         """Get an external mapping file, respecting a cache time
 
         Args:
@@ -201,9 +213,95 @@ class SeaDexArr:
 
         return True
 
-    def get_seadex_dict(self,
-                        sd_entry,
-                        ):
+    def get_seadex_entry(
+        self,
+        al_id,
+    ):
+        """Get SeaDex entry from AniList ID
+
+        Args:
+            al_id (str): AniList ID
+        """
+
+        sd_entry = None
+        try:
+            sd_entry = self.seadex.from_id(al_id)
+        except EntryNotFoundError:
+            pass
+
+        return sd_entry
+
+    def get_anilist_ids(
+        self,
+        tvdb_id=None,
+        tmdb_id=None,
+    ):
+        """Get a list of entries that match on TVDB ID
+
+        Args:
+            tvdb_id (int): TVDB ID
+            tmdb_id (int): TMDB ID
+        """
+
+        if tvdb_id is None and tmdb_id is None:
+            raise ValueError("Either tvdb_id or tmdb_id must be specified")
+        if tvdb_id is not None and tmdb_id is not None:
+            raise ValueError("Only one of tvdb_id and tmdb_id should be specified")
+
+        anilist_mappings = {}
+        if tvdb_id is not None:
+            anilist_mappings = {
+                n: m
+                for n, m in self.anime_mappings.items()
+                if m.get("tvdb_id", None) == tvdb_id
+            }
+        elif tmdb_id is not None:
+            anilist_mappings = {
+                n: m
+                for n, m in self.anime_mappings.items()
+                if m.get("tmdb_movie_id", None) == tmdb_id
+            }
+
+        # Filter out anything without an AniList ID
+        anilist_mappings = {
+            n: m
+            for n, m in anilist_mappings.items()
+            if m.get("anilist_id", None) is not None
+        }
+
+        # Sort by AniList ID
+        anilist_mappings = dict(
+            sorted(anilist_mappings.items(), key=lambda item: item[1].get("anilist_id"))
+        )
+
+        return anilist_mappings
+
+    def get_anilist_title(
+        self,
+        al_id,
+        sd_entry,
+    ):
+        """Get the AniList title from an ID and the SeaDex entry
+
+        Args:
+            al_id (str): AniList ID
+            sd_entry: SeaDex entry
+        """
+
+        anilist_title, self.al_cache = get_anilist_title(
+            al_id,
+            al_cache=self.al_cache,
+        )
+
+        self.log_al_title(
+            anilist_title=anilist_title,
+            sd_entry=sd_entry,
+        )
+
+    def get_seadex_dict(
+        self,
+        sd_entry,
+    ):
         """Parse and filter SeaDex request
 
         Args:
@@ -212,33 +310,23 @@ class SeaDexArr:
 
         # Start by potentially filtering down to only public ones
         if self.public_only:
-            final_torrent_list = [t for t in sd_entry.torrents
-                                  if t.tracker.is_public()
-                                  ]
+            final_torrent_list = [t for t in sd_entry.torrents if t.tracker.is_public()]
         else:
             final_torrent_list = copy.deepcopy(sd_entry.torrents)
 
         # Next, pull out ones tagged as best, so long as at least one
         # is tagged as best
         if self.want_best:
-            any_best = any([t.is_best
-                            for t in final_torrent_list
-                            ])
+            any_best = any([t.is_best for t in final_torrent_list])
             if any_best:
-                final_torrent_list = [t for t in final_torrent_list
-                                      if t.is_best
-                                      ]
+                final_torrent_list = [t for t in final_torrent_list if t.is_best]
 
         # Now, if we prefer dual audio then remove any that aren't
         # tagged, so long as at least one is tagged
         if self.prefer_dual_audio:
-            any_dual_audio = any([t.is_dual_audio
-                                  for t in final_torrent_list
-                                  ])
+            any_dual_audio = any([t.is_dual_audio for t in final_torrent_list])
             if any_dual_audio:
-                final_torrent_list = [t for t in final_torrent_list
-                                      if t.is_dual_audio
-                                      ]
+                final_torrent_list = [t for t in final_torrent_list if t.is_dual_audio]
 
         # Pull out release groups, URLs, and hashes from the final list we have
         # as a dictionary
@@ -246,20 +334,151 @@ class SeaDexArr:
         for t in final_torrent_list:
 
             if t.release_group not in seadex_release_groups:
-                seadex_release_groups[t.release_group] = {
-                    "url": {}
-                }
+                seadex_release_groups[t.release_group] = {"url": {}}
 
-            seadex_release_groups[t.release_group]["url"][t.url] = {"url": t.url,
-                                                                    "tracker": t.tracker.name,
-                                                                    "hash": t.infohash,
-                                                                    }
+            seadex_release_groups[t.release_group]["url"][t.url] = {
+                "url": t.url,
+                "tracker": t.tracker.name,
+                "hash": t.infohash,
+            }
         return seadex_release_groups
 
-    def add_torrent(self,
-                    torrent_dict,
-                    torrent_client="qbit",
-                    ):
+    def filter_seadex_interactive(
+        self,
+        seadex_dict,
+        sd_entry,
+    ):
+        """If multiple matches are found, let the user filter them interactively
+
+        Args:
+            seadex_dict: Dictionary of SeaDex releases
+            sd_entry: SeaDex entry
+        """
+
+        self.logger.warning(
+            centred_string(
+                f"Multiple releases found!:",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.warning(
+            left_aligned_string(
+                f"Here are the SeaDex notes:",
+                total_length=self.log_line_length,
+            )
+        )
+
+        notes = sd_entry.notes.split("\n")
+        for n in notes:
+            self.logger.warning(
+                left_aligned_string(
+                    n,
+                    total_length=self.log_line_length,
+                )
+            )
+        self.logger.warning(
+            left_aligned_string(
+                "",
+                total_length=self.log_line_length,
+            )
+        )
+
+        all_srgs = list(seadex_dict.keys())
+        for s_i, s in enumerate(all_srgs):
+            self.logger.warning(
+                left_aligned_string(
+                    f"[{s_i}]: {s}",
+                    total_length=self.log_line_length,
+                )
+            )
+
+        srgs_to_grab = input(
+            f"Which release do you want to grab? "
+            f"Single number for one, comma separated list for multiple, or blank for all: "
+        )
+
+        srgs_to_grab = srgs_to_grab.split(",")
+
+        # Remove any blank entries
+        while "" in srgs_to_grab:
+            srgs_to_grab.remove("")
+
+        # If we have some selections, parse down
+        if len(srgs_to_grab) > 0:
+            seadex_dict_filtered = {}
+            for srg_idx in srgs_to_grab:
+
+                try:
+                    srg = all_srgs[int(srg_idx)]
+                except IndexError:
+                    self.logger.warning(
+                        left_aligned_string(
+                            f"Index {srg_idx} is out of range",
+                            total_length=self.log_line_length,
+                        )
+                    )
+                    continue
+                seadex_dict_filtered[srg] = copy.deepcopy(seadex_dict[srg])
+
+            seadex_dict = copy.deepcopy(seadex_dict_filtered)
+
+        return seadex_dict
+
+    def get_seadex_fields(
+        self,
+        arr,
+        al_id,
+        release_group,
+        seadex_dict,
+    ):
+        """Get fields for Discord post
+
+        Args:
+            arr: Type of arr instance
+            al_id: AniList ID
+            release_group: Arr release group
+            seadex_dict: Dictionary of SeaDex releases
+        """
+
+        anilist_thumb, self.al_cache = get_anilist_thumb(
+            al_id=al_id,
+            al_cache=self.al_cache,
+        )
+        fields = []
+
+        # The first field should be the Arr group. If it's empty, mention it's missing
+        release_group_discord = copy.deepcopy(release_group)
+
+        # Catch various edge cases
+        if release_group_discord is None:
+            release_group_discord = ["None"]
+        if len(release_group_discord) == 0:
+            release_group_discord = ["None"]
+        if isinstance(release_group_discord, str):
+            release_group_discord = [release_group]
+
+        field_dict = {
+            "name": f"{arr.capitalize()} Release:",
+            "value": "\n".join(release_group_discord),
+        }
+        fields.append(field_dict)
+
+        # SeaDex options with links
+        for srg, srg_item in seadex_dict.items():
+            field_dict = {
+                "name": f"SeaDex recommendation: {srg}",
+                "value": "\n".join(srg_item["url"]),
+            }
+
+            fields.append(field_dict)
+
+        return fields, anilist_thumb
+
+    def add_torrent(
+        self,
+        torrent_dict,
+        torrent_client="qbit",
+    ):
         """Add torrent(s) to a torrent client
 
         Args:
@@ -273,9 +492,10 @@ class SeaDexArr:
         for srg, srg_item in torrent_dict.items():
 
             self.logger.info(
-                left_aligned_string(f"Adding torrent(s) for group {srg} to {torrent_client}",
-                                    total_length=self.log_line_length,
-                                    )
+                left_aligned_string(
+                    f"Adding torrent(s) for group {srg} to {torrent_client}",
+                    total_length=self.log_line_length,
+                )
             )
 
             for url in srg_item["url"]:
@@ -294,19 +514,21 @@ class SeaDexArr:
                     raise Exception("Have not managed to parse the torrent URL")
 
                 if torrent_client == "qbit":
-                    success = self.add_torrent_to_qbit(url=url,
-                                                       torrent_url=parsed_url,
-                                                       torrent_hash=item_hash,
-                                                       )
+                    success = self.add_torrent_to_qbit(
+                        url=url,
+                        torrent_url=parsed_url,
+                        torrent_hash=item_hash,
+                    )
 
                 else:
                     raise ValueError(f"Unsupported torrent client {torrent_client}")
 
                 if success == "torrent_added":
                     self.logger.info(
-                        left_aligned_string(f"   Added {parsed_url} to {torrent_client}",
-                                            total_length=self.log_line_length,
-                                            )
+                        left_aligned_string(
+                            f"   Added {parsed_url} to {torrent_client}",
+                            total_length=self.log_line_length,
+                        )
                     )
 
                     # Increment the number of torrents added, and if we've hit the limit then
@@ -319,9 +541,10 @@ class SeaDexArr:
 
                 elif success == "torrent_already_added":
                     self.logger.info(
-                        left_aligned_string(f"   Torrent already in {torrent_client}",
-                                            total_length=self.log_line_length,
-                                            )
+                        left_aligned_string(
+                            f"   Torrent already in {torrent_client}",
+                            total_length=self.log_line_length,
+                        )
                     )
 
                 else:
@@ -329,11 +552,12 @@ class SeaDexArr:
 
         return n_torrents_added
 
-    def add_torrent_to_qbit(self,
-                            url,
-                            torrent_url,
-                            torrent_hash,
-                            ):
+    def add_torrent_to_qbit(
+        self,
+        url,
+        torrent_url,
+        torrent_hash,
+    ):
         """Add a torrent to qbittorrent
 
         Args:
@@ -348,17 +572,282 @@ class SeaDexArr:
 
         if torrent_hash in torr_hashes:
             self.logger.debug(
-                centred_string(f"Torrent {url} already in qBittorrent",
-                               total_length=self.log_line_length,
-                               )
+                centred_string(
+                    f"Torrent {url} already in qBittorrent",
+                    total_length=self.log_line_length,
+                )
             )
             return "torrent_already_added"
 
         # Add the torrent
-        result = self.qbit.torrents_add(urls=torrent_url,
-                                        category=self.torrent_category,
-                                        )
+        result = self.qbit.torrents_add(
+            urls=torrent_url,
+            category=self.torrent_category,
+        )
         if result != "Ok.":
             raise Exception("Failed to add torrent")
 
         return "torrent_added"
+
+    def log_arr_start(
+        self,
+        arr,
+        n_items,
+    ):
+        """Produce a log message for the start of the run
+
+        Args:
+            arr: Type of arr instance
+            n_items: Total number of shows/movies
+        """
+
+        if arr not in ALLOWED_ARRS:
+            raise ValueError(f"arr must be one of: {ALLOWED_ARRS}")
+
+        item_type = {
+            "radarr": "movies",
+            "sonarr": "series",
+        }[arr]
+
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                f"Starting SeaDex-{arr.capitalize()} for {n_items} {item_type}",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_arr_item_start(
+        self,
+        arr,
+        item_title,
+        n_item,
+        n_items,
+    ):
+        """Produce a log message for the start of Arr item
+
+        Args:
+            arr: Type of arr instance
+            item_title: Title for the item
+            n_item: Number for the show/movie
+            n_items: Total number of shows/movies
+        """
+
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                f"[{n_item}/{n_items}] {arr.capitalize()}: {item_title}",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                "-" * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_no_anilist_mappings(
+        self,
+        title,
+    ):
+        """Produce a log message for the case where no AniList mappings are found
+
+        Args:
+            title: Title for the item
+        """
+
+        self.logger.warning(
+            centred_string(
+                f"No AniList mappings found for {title}. Skipping",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_no_anilist_id(self):
+        """Produce a log message for the case where no AniList ID is found"""
+
+        self.logger.debug(
+            centred_string(
+                f"-> No AL ID found. Continuing",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.debug(
+            centred_string(
+                "-" * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_no_sd_entry(
+        self,
+        al_id,
+    ):
+        """Produce a log message if no SeaDex entry is found
+
+        Args:
+            al_id (str): Al ID
+        """
+
+        self.logger.debug(
+            centred_string(
+                f"No SeaDex entry found for AniList ID {al_id}. Continuing",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.debug(
+            centred_string(
+                "-" * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_al_title(
+        self,
+        anilist_title,
+        sd_entry,
+    ):
+        """Produce a log message for the AniList title, with URL and notice if incomplete
+
+        Args:
+            anilist_title (str): Title for the AniList
+            sd_entry: SeaDex entry
+        """
+
+        sd_url = sd_entry.url
+        is_incomplete = sd_entry.is_incomplete
+
+        # Get a string, marking if things are incomplete
+        al_str = f"AniList: {anilist_title} ({sd_url})"
+        if is_incomplete:
+            al_str += f" [MARKED INCOMPLETE]"
+
+        self.logger.info(
+            centred_string(
+                al_str,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_no_seadex_releases(self):
+        """Log if no suitable SeaDex releases are found"""
+
+        self.logger.info(
+            centred_string(
+                f"No suitable releases found on SeaDex",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                "-" * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_arr_seadex_mismatch(
+        self,
+        arr,
+        seadex_dict,
+    ):
+        """Log out there's a mismatch between the Arr releases and the SeaDex recommendations
+
+        Args:
+            arr: Type of arr instance
+            seadex_dict (dict): Dictionary of SeaDex entries
+        """
+
+        if arr not in ALLOWED_ARRS:
+            raise ValueError(f"arr must be one of: {ALLOWED_ARRS}")
+
+        item_type = {
+            "radarr": "movie",
+            "sonarr": "series",
+        }[arr]
+
+        self.logger.info(
+            centred_string(
+                f"Mismatch found between SeaDex recommendation and existing {arr.capitalize()} {item_type}!",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                f"SeaDex recommended version(s):",
+                total_length=self.log_line_length,
+            )
+        )
+
+        # SeaDex options with links
+        for srg, srg_item in seadex_dict.items():
+
+            self.logger.info(
+                left_aligned_string(
+                    f"{srg}:",
+                    total_length=self.log_line_length,
+                )
+            )
+            for url in srg_item["url"]:
+                self.logger.info(
+                    left_aligned_string(
+                        f"   {url}",
+                        total_length=self.log_line_length,
+                    )
+                )
+
+        return True
+
+    def log_max_torrents_added(self):
+        """Produce a log message about hitting maximum number of torrents added"""
+
+        self.logger.info(
+            centred_string(
+                "Added maximum number of torrents for this run. Stopping",
+                total_length=self.log_line_length,
+            )
+        )
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
