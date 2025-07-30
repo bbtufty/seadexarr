@@ -109,6 +109,7 @@ class SeaDexRadarr(SeaDexArr):
 
                 if len(seadex_dict) == 0:
                     self.log_no_seadex_releases()
+                    time.sleep(self.sleep_time)
                     continue
 
                 self.logger.debug(

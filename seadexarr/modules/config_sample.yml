@@ -26,6 +26,7 @@ discord_url:
 public_only: true
 prefer_dual_audio: true
 want_best: true
+trackers:
 
 # Advanced settings
 sleep_time: 2

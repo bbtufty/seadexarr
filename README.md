@@ -107,6 +107,26 @@ description of each is given below.
 - `public_only`: Will only return results from public trackers. Defaults to True
 - `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. Defaults to True
 - `want_best`: Prefer results tagged as best, if any exist. Defaults to True
+- `trackers`: Can manually select a list of trackers. Defaults to None, which will use all the 
+  public trackers and private trackers if `public_only` is False. All possible trackers are below,
+  but currently there is only support for parsing Nyaa
+
+```
+trackers:
+# Public trackers
+- Nyaa
+- AnimeTosho
+- AniDex
+- RuTracker
+# Private trackers
+- AB
+- BeyondHD
+- PassThePopcorn
+- BroadcastTheNet
+- HDBits
+- Blutopia
+- Aither
+```
 
 ### Advanced settings
 
