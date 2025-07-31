@@ -392,6 +392,11 @@ class SeaDexSonarr(SeaDexArr):
                     for ms in anidb_mapping_list:
                         m = ms.findall("mapping")
                         for i in m:
+
+                            # If there's no text, continue
+                            if not i.text:
+                                continue
+
                             # Split at semicolons
                             i_split = i.text.strip(";").split(";")
                             i_split = [x.split("-") for x in i_split]
