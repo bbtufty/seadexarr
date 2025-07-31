@@ -1,6 +1,7 @@
 import time
 
 import requests
+import arrapi.exceptions
 from arrapi import RadarrAPI
 
 from .discord import discord_push
@@ -239,6 +240,21 @@ class SeaDexRadarr(SeaDexArr):
         radarr_movies.sort(key=lambda x: x.title)
 
         return radarr_movies
+
+    def get_radarr_movie(self, tmdb_id=None, imdb_id=None):
+        """Get Radarr movie for a given TMDB ID or IMDb ID
+
+        Args:
+            tmdb_id (int): TMDB movie ID
+            imdb_id (str): IMDb movie ID
+        """
+
+        try:
+            movie = self.radarr.get_movie(tmdb_id=tmdb_id, imdb_id=imdb_id)
+        except arrapi.exceptions.NotFound:
+            movie = None
+
+        return movie
 
     def get_radarr_release_group(
         self,

@@ -12,6 +12,7 @@ from .anilist import (
 from .discord import discord_push
 from .log import centred_string
 from .seadex_arr import SeaDexArr
+from .seadex_radarr import SeaDexRadarr
 
 
 def get_tvdb_id(mapping):
@@ -74,6 +75,18 @@ class SeaDexSonarr(SeaDexArr):
             apikey=self.sonarr_api_key,
         )
 
+        self.ignore_movies_in_radarr = self.config.get("ignore_movies_in_radarr", False)
+
+        # Also, if we have Radarr info, set up an instance there
+        self.radarr = None
+        self.all_radarr_movies = None
+        radarr_url = self.config.get("radarr_url", None)
+        radarr_api_key = self.config.get("radarr_api_key", None)
+
+        if radarr_url is not None and radarr_api_key is not None:
+            self.radarr = SeaDexRadarr(config=config)
+            self.all_radarr_movies = self.radarr.get_all_radarr_movies()
+
     def run(self):
         """Run the SeaDex Sonarr Syncer"""
 
@@ -132,6 +145,62 @@ class SeaDexSonarr(SeaDexArr):
                     al_id=al_id,
                     sd_entry=sd_entry,
                 )
+
+                # If we have a Radarr instance, and we don't want to add movies that
+                # are already in Radarr, do that now
+                if (
+                    self.radarr is not None
+                    and self.all_radarr_movies is not None
+                    and self.ignore_movies_in_radarr
+                ):
+
+                    radarr_movies = []
+
+                    # Make sure these are flagged as specials since
+                    # sometimes shows and movies are all lumped together
+                    mapping_season = mapping.get("tvdb_season", -1)
+                    if mapping_season == 0:
+
+                        mapping_tmdb_id = mapping.get("tmdb_movie_id", None)
+                        mapping_imdb_id = mapping.get("imdb_id", None)
+
+                        for m in self.all_radarr_movies:
+
+                            # Check by TMDB IDs
+                            if mapping_tmdb_id is not None:
+                                if (
+                                    m.tmdbId == mapping_tmdb_id
+                                    and m not in radarr_movies
+                                ):
+                                    radarr_movies.append(m)
+
+                            # Check by IMDb IDs
+                            if mapping_imdb_id is not None:
+                                if (
+                                    m.imdbId == mapping_imdb_id
+                                    and m not in radarr_movies
+                                ):
+                                    radarr_movies.append(m)
+
+                    if len(radarr_movies) > 0:
+
+                        for movie in radarr_movies:
+                            self.logger.info(
+                                centred_string(
+                                    f"{movie.title} found in Radarr, will skip",
+                                    total_length=self.log_line_length,
+                                )
+                            )
+
+                        self.logger.info(
+                            centred_string(
+                                "-" * self.log_line_length,
+                                total_length=self.log_line_length,
+                            )
+                        )
+
+                        time.sleep(self.sleep_time)
+                        continue
 
                 # Get the episode list for all relevant episodes
                 ep_list = self.get_ep_list(
@@ -277,6 +346,8 @@ class SeaDexSonarr(SeaDexArr):
             imdb_id = s.imdbId
             if imdb_id in all_imdb_ids and s not in sonarr_series:
                 sonarr_series.append(s)
+
+        sonarr_series.sort(key=lambda x: x.title)
 
         return sonarr_series
 

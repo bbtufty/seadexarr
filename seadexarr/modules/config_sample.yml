@@ -1,6 +1,7 @@
 # Parameters for Sonarr
 sonarr_url:
 sonarr_api_key:
+ignore_movies_in_radarr: false  # If True, will not add movies to Sonarr that already exist in Radarr
 
 # Parameters for Radarr
 radarr_url:
