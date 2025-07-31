@@ -1,6 +1,7 @@
 0.3.1 (Unreleased)
 ==================
 
+- Fix crash when AniDB mapping contains no text
 - Use IMDb for finding AniList mappings as well
 - Initial support for other trackers
 - Better handle Discord notifications and log messages when torrent already in client
