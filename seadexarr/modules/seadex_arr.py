@@ -7,6 +7,7 @@ from urllib.request import urlretrieve
 from xml.etree import ElementTree
 
 import qbittorrentapi
+import yaml
 from ruamel.yaml import YAML
 from seadex import SeaDexEntry, EntryNotFoundError
 
@@ -67,7 +68,7 @@ class SeaDexArr:
             raise FileNotFoundError(f"{config} not found. Copying template")
 
         with open(config, "r") as f:
-            self.config = YAML().load(f)
+            self.config = yaml.safe_load(f)
 
         # Check the config has all the same keys as the sample, if not add 'em in
         self.verify_config(
@@ -161,28 +162,25 @@ class SeaDexArr:
         with open(config_template_path, "r") as f:
             config_template = YAML().load(f)
 
-        anything_changed = False
+        # If the keys aren't in the right order, then
+        # use the template as a base and inherit from
+        # the main config
+        if not list(self.config.keys()) == list(config_template.keys()):
 
-        # Loop over keys in the config template, add any missing
-        for key in config_template:
-            if key not in self.config:
-                self.config[key] = config_template[key]
-                anything_changed = True
+            new_config = copy.deepcopy(config_template)
+            for key in config_template.keys():
+                if key in self.config:
+                    new_config[key] = copy.deepcopy(self.config[key])
+                else:
+                    new_config[key] = copy.deepcopy(config_template[key])
 
-        # Loop over keys in the config file, remove any that aren't
-        # in the template
-        keys_to_del = []
-        for key in self.config:
-            if key not in config_template:
-                keys_to_del.append(key)
-                anything_changed = True
-        for key in keys_to_del:
-            del self.config[key]
+            self.config = copy.deepcopy(new_config)
 
-        # Save out if anything's changed
-        if anything_changed:
+            # Save out
             with open(config_path, "w+") as f:
                 YAML().dump(self.config, f)
+
+        return True
 
     def get_anime_mappings(self):
         """Get the anime IDs file"""

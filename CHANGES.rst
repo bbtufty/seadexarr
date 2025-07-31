@@ -1,6 +1,7 @@
-0.3.1 (Unreleased)
+0.4.0 (Unreleased)
 ==================
 
+- More robust config when parameters added
 - Build Docker for every main update
 - Fix crash when AniDB mapping contains no text
 - Use IMDb for finding AniList mappings as well
