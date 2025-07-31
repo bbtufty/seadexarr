@@ -13,7 +13,7 @@ from seadex import SeaDexEntry, EntryNotFoundError
 
 from .anilist import get_anilist_title, get_anilist_thumb
 from .log import setup_logger, centred_string, left_aligned_string
-from .torrent import get_nyaa_url
+from .torrent import get_nyaa_url, get_animetosho_url
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
@@ -575,7 +575,11 @@ class SeaDexArr:
 
                 # Nyaa
                 if tracker.lower() == "nyaa":
-                    parsed_url = get_nyaa_url(url)
+                    parsed_url = get_nyaa_url(url=url)
+
+                # AnimeTosho
+                elif tracker.lower() == "animetosho":
+                    parsed_url = get_animetosho_url(url=url)
 
                 # Otherwise, bug out
                 else:

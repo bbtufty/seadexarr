@@ -1,3 +1,8 @@
+0.5.0 (Unreleased)
+==================
+
+- Added support for AnimeTosho
+
 0.4.0 (2025-07-31)
 ==================
 
