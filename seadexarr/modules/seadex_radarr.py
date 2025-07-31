@@ -161,6 +161,11 @@ class SeaDexRadarr(SeaDexArr):
                                 torrent_client="qbit",
                             )
 
+                        # Otherwise, increment by the number of torrents in the SeaDex dict
+                        else:
+                            n_torrents_added += len(seadex_dict)
+                            self.torrents_added += len(seadex_dict)
+
                         # Push a message to Discord if we've added anything
                         if self.discord_url is not None and n_torrents_added > 0:
                             discord_push(

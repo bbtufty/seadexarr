@@ -612,7 +612,7 @@ class SeaDexArr:
                     n_torrents_added += 1
                     if self.max_torrents_to_add is not None:
                         if self.torrents_added >= self.max_torrents_to_add:
-                            return True
+                            return n_torrents_added
 
                 elif success == "torrent_already_added":
                     self.logger.info(
