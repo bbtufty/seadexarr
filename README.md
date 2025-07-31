@@ -28,7 +28,7 @@ SeaDexArr is available as a Docker container. Into a docker-compose file:
 services:
 
   seadexarr:
-    image: ghcr.io/bbtufty/seadexarr:latest
+    image: ghcr.io/bbtufty/seadexarr:latest  # or seadexarr:main for the cutting edge
     container_name: seadexarr
     environment: 
       - SCHEDULE_TIME=6  # How often to run, in hours
