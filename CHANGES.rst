@@ -1,4 +1,4 @@
-0.4.0 (Unreleased)
+0.4.0 (2025-07-31)
 ==================
 
 - Added ignore_movies_in_radarr for SeaDexSonarr, which will skip movies flagged as Specials in Sonarr that already
