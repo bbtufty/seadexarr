@@ -1,6 +1,7 @@
 0.3.1 (Unreleased)
 ==================
 
+- Use IMDb for finding AniList mappings as well
 - Initial support for other trackers
 - Better handle Discord notifications and log messages when torrent already in client
 - Map potentially weird episodes SeaDexSonarr if in Season 0 (Specials)

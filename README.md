@@ -10,11 +10,11 @@
 SeaDexArr is designed as a tool to ensure that you have Anime releases on the Arr apps that match with the best 
 releases tagged on SeaDex. SeaDexArr supports both Sonarr and Radarr.
 
-For Sonarr, it works by scanning through series tagged as type "Anime", matching these up via the TVDB ID to AniList 
+For Sonarr, it works by scanning through series, matching these up via the TVDB or IMDb IDs to AniList 
 mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
 (https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database.
 
-For Radarr, this works much the same but instead using the TMDB IDs.
+For Radarr, this works much the same but instead using the TMDB and IMDb IDs.
 
 SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
 automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
