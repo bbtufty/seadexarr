@@ -1,3 +1,9 @@
+0.4.2 (Unreleased)
+==================
+
+- Fix Discord messages not getting pushed if no torrent client selected
+- Fix adding too many torrents in one go
+
 0.4.1 (2025-07-31)
 ==================
 
