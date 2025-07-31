@@ -1,4 +1,4 @@
-0.4.1 (Unreleased)
+0.4.1 (2025-07-31)
 ==================
 
 - Add PyYAML to pyproject.toml
