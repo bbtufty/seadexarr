@@ -1,6 +1,8 @@
 0.4.0 (Unreleased)
 ==================
 
+- Added ignore_movies_in_radarr for SeaDexSonarr, which will skip movies flagged as Specials in Sonarr that already
+  exist in Radarr
 - More robust config when parameters added
 - Build Docker for every main update
 - Fix crash when AniDB mapping contains no text

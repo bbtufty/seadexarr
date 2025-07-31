@@ -335,7 +335,7 @@ class SeaDexArr:
         """Get the AniList title from an ID and the SeaDex entry
 
         Args:
-            al_id (str): AniList ID
+            al_id (int): AniList ID
             sd_entry: SeaDex entry
         """
 
@@ -348,6 +348,8 @@ class SeaDexArr:
             anilist_title=anilist_title,
             sd_entry=sd_entry,
         )
+
+        return anilist_title
 
     def get_seadex_dict(
         self,
