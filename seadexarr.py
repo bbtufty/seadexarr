@@ -32,7 +32,7 @@ logger = setup_logger(log_level="INFO")
 if running_schedule:
 
     # Get how often to run things
-    schedule_time = os.getenv("SCHEDULE_TIME", 6)
+    schedule_time = float(os.getenv("SCHEDULE_TIME", 6))
 
     logger.info(f"Running in scheduled mode")
 
