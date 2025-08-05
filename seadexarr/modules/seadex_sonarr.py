@@ -125,6 +125,14 @@ class SeaDexSonarr(SeaDexArr):
                 n_items=n_sonarr,
             )
 
+            # If we're not monitored, then skip if ignore_unmonitored is switched on
+            if not sonarr_series.monitored and self.ignore_unmonitored:
+                self.log_arr_item_unmonitored(
+                    arr="sonarr",
+                    item_title=sonarr_title,
+                )
+                continue
+
             # Get the mappings from the Sonarr series to AniList
             al_mappings = self.get_anilist_ids(
                 tvdb_id=tvdb_id,
@@ -218,6 +226,16 @@ class SeaDexSonarr(SeaDexArr):
                     anidb_id=anidb_id,
                     mapping=mapping,
                 )
+
+                # If all episodes are unmonitored, then skip if ignore_unmonitored is switched on
+                ep_list_monitored = [x.get("monitored", True) for x in ep_list]
+                if not any(ep_list_monitored) and self.ignore_unmonitored:
+                    self.log_anilist_item_unmonitored(
+                        arr="sonarr",
+                        item_title=anilist_title,
+                    )
+                    time.sleep(self.sleep_time)
+                    continue
 
                 sonarr_release_groups = self.get_sonarr_release_groups(ep_list=ep_list)
 

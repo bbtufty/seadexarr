@@ -1,6 +1,7 @@
 0.4.2 (Unreleased)
 ==================
 
+- Add options to ignore unmonitored series/movies
 - Save logs to file
 - Ensure SCHEDULE_TIME is brought in as a float
 - Fix Discord messages not getting pushed if no torrent client selected

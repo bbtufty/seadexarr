@@ -74,6 +74,14 @@ class SeaDexRadarr(SeaDexArr):
                 n_items=n_radarr,
             )
 
+            # If we're not monitored, then skip if ignore_unmonitored is switched on
+            if not radarr_movie.monitored and self.ignore_unmonitored:
+                self.log_arr_item_unmonitored(
+                    arr="radarr",
+                    item_title=radarr_title,
+                )
+                continue
+
             # Get the mappings from the Radarr movies to AniList
             al_mappings = self.get_anilist_ids(
                 tmdb_id=tmdb_id,

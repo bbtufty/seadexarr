@@ -79,6 +79,9 @@ class SeaDexArr:
             config_template_path=config_template_path,
         )
 
+        # Ignore unmonitored flag
+        self.ignore_unmonitored = self.config.get(f"{arr}_ignore_unmonitored", False)
+
         # qBit
         self.qbit = None
         qbit_info = self.config.get("qbit_info", None)
@@ -706,6 +709,62 @@ class SeaDexArr:
         self.logger.info(
             centred_string(
                 self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_arr_item_unmonitored(
+        self,
+        arr,
+        item_title,
+    ):
+        """Produce a log message if skipping because item is unmonitored
+
+        Args:
+            arr: Type of arr instance
+            item_title (str): Item title
+        """
+
+        self.logger.info(
+            centred_string(
+                f"{item_title} is unmonitored in {arr.capitalize()}",
+                total_length=self.log_line_length,
+            )
+        )
+
+        self.logger.info(
+            centred_string(
+                self.log_line_sep * self.log_line_length,
+                total_length=self.log_line_length,
+            )
+        )
+
+        return True
+
+    def log_anilist_item_unmonitored(
+        self,
+        arr,
+        item_title,
+    ):
+        """Produce a log message if skipping an AniList item because it's unmonitored in Sonarr
+
+        Args:
+            arr: Type of arr instance
+            item_title (str): Item title
+        """
+
+        self.logger.info(
+            centred_string(
+                f"{item_title} is unmonitored in {arr.capitalize()}",
+                total_length=self.log_line_length,
+            )
+        )
+
+        self.logger.info(
+            centred_string(
+                "-" * self.log_line_length,
                 total_length=self.log_line_length,
             )
         )
