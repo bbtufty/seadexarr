@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 
 ANIMETOSHO_FEED_URL = "https://animetosho.org/feed/json"
 
+
 def get_nyaa_url(url):
     """Get Nyaa torrent link from URL
 
@@ -17,6 +18,7 @@ def get_nyaa_url(url):
     parsed_url = str(nyaa.torrent_file)
 
     return parsed_url
+
 
 def get_animetosho_url(url):
     """Get AnimeTosho torrent link from URL

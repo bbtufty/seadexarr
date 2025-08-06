@@ -47,18 +47,25 @@ def get_tvdb_season(mapping):
 
 class SeaDexSonarr(SeaDexArr):
 
-    def __init__(self, config="config.yml"):
+    def __init__(
+        self,
+        config="config.yml",
+        logger=None,
+    ):
         """Sync Sonarr instance with SeaDex
 
         Args:
             config (str, optional): Path to config file.
                 Defaults to "config.yml".
+            logger. Logging instance. Defaults to None,
+                which will create one.
         """
 
         SeaDexArr.__init__(
             self,
             arr="sonarr",
             config=config,
+            logger=logger,
         )
 
         # Set up Sonarr
@@ -84,7 +91,10 @@ class SeaDexSonarr(SeaDexArr):
         radarr_api_key = self.config.get("radarr_api_key", None)
 
         if radarr_url is not None and radarr_api_key is not None:
-            self.radarr = SeaDexRadarr(config=config)
+            self.radarr = SeaDexRadarr(
+                config=config,
+                logger=logger,
+            )
             self.all_radarr_movies = self.radarr.get_all_radarr_movies()
 
     def run(self):

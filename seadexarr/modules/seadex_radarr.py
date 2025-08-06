@@ -11,18 +11,25 @@ from .seadex_arr import SeaDexArr
 
 class SeaDexRadarr(SeaDexArr):
 
-    def __init__(self, config="config.yml"):
+    def __init__(
+        self,
+        config="config.yml",
+        logger=None,
+    ):
         """Sync Radarr instance with SeaDex
 
         Args:
             config (str, optional): Path to config file.
                 Defaults to "config.yml".
+            logger. Logging instance. Defaults to None,
+                which will create one.
         """
 
         SeaDexArr.__init__(
             self,
             arr="radarr",
             config=config,
+            logger=logger,
         )
 
         # Set up Radarr

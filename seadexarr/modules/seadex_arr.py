@@ -47,6 +47,7 @@ class SeaDexArr:
         self,
         arr="sonarr",
         config="config.yml",
+        logger=None,
     ):
         """Base class for SeaDexArr instances
 
@@ -55,6 +56,8 @@ class SeaDexArr:
                 Defaults to "sonarr".
             config (str, optional): Path to config file.
                 Defaults to "config.yml".
+            logger. Logging instance. Defaults to None,
+                which will create one.
         """
 
         # If we don't have a config file, copy the sample to the current
@@ -135,8 +138,12 @@ class SeaDexArr:
         self.anidb_mappings = anidb_mappings
 
         self.interactive = self.config.get("interactive", False)
-        log_level = self.config.get("log_level", "INFO")
-        self.logger = setup_logger(log_level=log_level)
+
+        if logger is None:
+            log_level = self.config.get("log_level", "INFO")
+            self.logger = setup_logger(log_level=log_level)
+        else:
+            self.logger = logger
 
         # Instantiate the SeaDex API
         self.seadex = SeaDexEntry()
