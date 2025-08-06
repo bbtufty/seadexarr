@@ -1,11 +1,13 @@
 # Parameters for Sonarr
 sonarr_url:
 sonarr_api_key:
+sonarr_ignore_unmonitored: false  # If True, will not grab releases that are unmonitored in Sonarr
 ignore_movies_in_radarr: false  # If True, will not add movies to Sonarr that already exist in Radarr
 
 # Parameters for Radarr
 radarr_url:
 radarr_api_key:
+radarr_ignore_unmonitored: false  # If True, will not grab releases that are unmonitored in Radarr
 
 # qBittorrent parameters
 qbit_info:
