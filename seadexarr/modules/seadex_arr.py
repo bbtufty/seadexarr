@@ -259,7 +259,7 @@ class SeaDexArr:
         """Get SeaDex entry from AniList ID
 
         Args:
-            al_id (str): AniList ID
+            al_id (int): AniList ID
         """
 
         sd_entry = None
@@ -405,6 +405,7 @@ class SeaDexArr:
 
             if t.release_group not in seadex_release_groups:
                 seadex_release_groups[t.release_group] = {"url": {}}
+                seadex_release_groups[t.release_group]["tags"] = t.tags
 
             seadex_release_groups[t.release_group]["url"][t.url] = {
                 "url": t.url,
@@ -535,9 +536,21 @@ class SeaDexArr:
 
         # SeaDex options with links
         for srg, srg_item in seadex_dict.items():
+
+            # Include any tags in the string
+            discord_value = ""
+            if len(srg_item["tags"]) > 0:
+                discord_value += "Tags:\n"
+                discord_value += "\n".join(srg_item["tags"])
+                discord_value += "\n\n"
+
+            # And include and URLs
+            discord_value += "Links:\n"
+            discord_value += "\n".join(srg_item["url"])
+
             field_dict = {
                 "name": f"SeaDex recommendation: {srg}",
-                "value": "\n".join(srg_item["url"]),
+                "value": discord_value,
             }
 
             fields.append(field_dict)
@@ -965,6 +978,14 @@ class SeaDexArr:
                     total_length=self.log_line_length,
                 )
             )
+            if len(srg_item["tags"]) > 0:
+                self.logger.info(
+                    left_aligned_string(
+                        f"   Tags: {','.join([t for t in srg_item['tags']])}",
+                        total_length=self.log_line_length,
+                    )
+                )
+
             for url in srg_item["url"]:
                 self.logger.info(
                     left_aligned_string(
