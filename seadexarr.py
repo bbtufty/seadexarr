@@ -27,16 +27,15 @@ if arr is None:
 config_dir = os.getenv("CONFIG_DIR", os.getcwd())
 config = os.path.join(config_dir, "config.yml")
 
-logger = setup_logger(log_level="INFO")
-
 if running_schedule:
 
     # Get how often to run things
     schedule_time = float(os.getenv("SCHEDULE_TIME", 6))
 
-    logger.info(f"Running in scheduled mode")
-
     while True:
+
+        logger = setup_logger(log_level="INFO")
+        logger.info(f"Running in scheduled mode")
 
         present_time = datetime.now().strftime("%H:%M")
         logger.info(f"Time is {present_time}. Starting run")
@@ -45,7 +44,10 @@ if running_schedule:
         # errors if they do arise. Split them up
         # so one crashing doesn't ruin the other
         try:
-            sdr = SeaDexRadarr(config=config)
+            sdr = SeaDexRadarr(
+                config=config,
+                logger=logger,
+            )
             sdr.run()
         except Exception:
             tb = traceback.format_exc()
@@ -53,7 +55,10 @@ if running_schedule:
                 logger.warning(line)
 
         try:
-            sds = SeaDexSonarr(config=config)
+            sds = SeaDexSonarr(
+                config=config,
+                logger=logger,
+            )
             sds.run()
         except Exception:
             tb = traceback.format_exc()
@@ -61,7 +66,7 @@ if running_schedule:
                 logger.warning(line)
 
         next_run_time = datetime.now() + timedelta(hours=schedule_time)
-        next_run_time = next_run_time.strftime('%H:%M')
+        next_run_time = next_run_time.strftime("%H:%M")
         logger.info(f"Run complete! Will run again at {next_run_time}")
 
         # Good job, have a rest
@@ -70,15 +75,23 @@ if running_schedule:
 # Else we're in a single run mode
 else:
 
+    logger = setup_logger(log_level="INFO")
+
     if arr in ALLOWED_ARRS:
 
         try:
             if arr == "radarr":
-                sdr = SeaDexRadarr(config=config)
+                sdr = SeaDexRadarr(
+                    config=config,
+                    logger=logger,
+                )
                 sdr.run()
 
             elif arr == "sonarr":
-                sds = SeaDexSonarr(config=config)
+                sds = SeaDexSonarr(
+                    config=config,
+                    logger=logger,
+                )
                 sds.run()
         except Exception:
             tb = traceback.format_exc()
