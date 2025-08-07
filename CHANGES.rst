@@ -1,6 +1,8 @@
 0.5.0 (Unreleased)
 ==================
 
+- Fix UTF-8 encoding warning in log
+- Move to episode-based filtering of torrents for Sonarr
 - Include SeaDex tags in log and Discord messages
 - Add options to ignore unmonitored series/movies
 - Save logs to file

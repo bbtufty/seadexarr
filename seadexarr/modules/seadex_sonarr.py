@@ -1,5 +1,9 @@
+import warnings
+
 import copy
 import time
+import os
+from urllib.parse import urlencode
 
 import arrapi.exceptions
 import requests
@@ -10,7 +14,7 @@ from .anilist import (
     get_anilist_format,
 )
 from .discord import discord_push
-from .log import centred_string
+from .log import centred_string, left_aligned_string
 from .seadex_arr import SeaDexArr
 from .seadex_radarr import SeaDexRadarr
 
@@ -43,6 +47,33 @@ def get_tvdb_season(mapping):
     tvdb_season = mapping.get("tvdb_season", -1)
 
     return tvdb_season
+
+
+def get_overlapping_results(seadex_dict):
+    """See if SeaDex releases have overlapping episodes
+
+    Args:
+        seadex_dict (dict): Dictionary of SeaDex releases
+    """
+
+    overlapping_results = False
+    if len(seadex_dict) > 0:
+        for rg1 in seadex_dict:
+            for rg2 in seadex_dict:
+
+                if rg1 == rg2:
+                    continue
+
+                intersect = list(
+                    filter(
+                        lambda x: x in seadex_dict[rg1]["all_episodes"],
+                        seadex_dict[rg2]["all_episodes"],
+                    )
+                )
+                if len(intersect) > 0:
+                    overlapping_results = True
+
+    return overlapping_results
 
 
 class SeaDexSonarr(SeaDexArr):
@@ -261,20 +292,29 @@ class SeaDexSonarr(SeaDexArr):
                     )
                 )
 
-                # If we're in interactive mode and there are multiple options here, then select
-                if self.interactive and len(seadex_dict) > 1:
+                # Parse out filenames and check for overlaps
+                seadex_dict = self.parse_episodes_from_seadex(seadex_dict=seadex_dict)
+                overlapping_results = get_overlapping_results(seadex_dict=seadex_dict)
+
+                # If we're in interactive mode and there are multiple equivalent options here, then select
+                if self.interactive and len(seadex_dict) > 1 and overlapping_results:
                     seadex_dict = self.filter_seadex_interactive(
                         seadex_dict=seadex_dict,
                         sd_entry=sd_entry,
                     )
 
-                # Check these things match up how we'd expect
-                sonarr_matches_seadex = False
-                for sonarr_release_group in sonarr_release_groups:
-                    if sonarr_release_group in seadex_dict.keys():
-                        sonarr_matches_seadex = True
+                # Filter downloads by whether the episodes in each torrent match the release
+                # group we have in Sonarr
+                seadex_dict = self.filter_seadex_downloads(
+                    seadex_dict=seadex_dict,
+                    arr="sonarr",
+                    arr_release_groups=sonarr_release_groups,
+                    ep_list=ep_list,
+                )
 
-                if not sonarr_matches_seadex:
+                any_to_download = self.get_any_to_download(seadex_dict=seadex_dict)
+
+                if any_to_download:
                     self.log_arr_seadex_mismatch(
                         arr="sonarr",
                         seadex_dict=seadex_dict,
@@ -560,7 +600,7 @@ class SeaDexSonarr(SeaDexArr):
                 continue
 
             release_group = ep.get("episodeFile", {}).get("releaseGroup", None)
-            if release_group is None:
+            if release_group is None or release_group == "":
                 continue
 
             if release_group not in sonarr_release_groups:
@@ -577,3 +617,72 @@ class SeaDexSonarr(SeaDexArr):
         sonarr_release_groups.sort()
 
         return sonarr_release_groups
+
+    def parse_episodes_from_seadex(
+        self,
+        seadex_dict,
+    ):
+        """For files in a SeaDex release, parse this through Sonarr to get season/episode numbers
+
+        This gets an overall episode list per-release group, and also episode lists per-torrent,
+        if there are multiple
+
+        Args:
+            seadex_dict (dict): Dictionary of seadex releases
+        """
+
+        for release_group in seadex_dict:
+
+            # Set up an overall "all episodes" list
+            seadex_dict[release_group]["all_episodes"] = []
+
+            for url in seadex_dict[release_group]["urls"]:
+
+                # Set up a list to parse episodes from files
+                seadex_dict[release_group]["urls"][url]["episodes"] = []
+
+                for seadex_file in seadex_dict[release_group]["urls"][url]["files"]:
+
+                    # Get basename from the file, and encode it through for the API
+                    # query
+                    f = os.path.basename(seadex_file)
+
+                    d = {"title": f, "apikey": self.sonarr_api_key}
+                    d_enc = urlencode(d)
+
+                    # Parse through Sonarr
+                    parse_req_url = f"{self.sonarr_url}/api/v3/parse?" f"{d_enc}"
+                    parse_req = requests.get(parse_req_url)
+                    j = parse_req.json()
+
+                    episode_info = j.get("episodes", [])
+
+                    if len(episode_info) == 0:
+                        self.logger.debug(
+                            left_aligned_string(
+                                f"Sonarr could not parse episode for {f}"
+                            )
+                        )
+                        continue
+
+                    # Add the season and episode numbers in
+                    for ep in episode_info:
+
+                        season = ep.get("seasonNumber", None)
+                        episode = ep.get("episodeNumber", None)
+
+                        if season is None or episode is None:
+                            raise ValueError("Season or episode has come up None")
+
+                        self.logger.debug(
+                            left_aligned_string(f"{f} mapped to: S{season:02d}E{episode:02d}")
+                        )
+
+                        seadex_dict[release_group]["urls"][url]["episodes"].append(
+                            {"season": season, "episode": episode}
+                        )
+                        seadex_dict[release_group]["all_episodes"].append(
+                            {"season": season, "episode": episode}
+                        )
+
+        return seadex_dict

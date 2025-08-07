@@ -146,12 +146,17 @@ class SeaDexRadarr(SeaDexArr):
                         seadex_dict=seadex_dict,
                         sd_entry=sd_entry,
                     )
-                # Check these things match up how we'd expect
-                radarr_matches_seadex = False
-                if radarr_release_group in seadex_dict.keys():
-                    radarr_matches_seadex = True
 
-                if not radarr_matches_seadex:
+                seadex_dict = self.filter_seadex_downloads(
+                    seadex_dict=seadex_dict,
+                    arr="radarr",
+                    arr_release_groups=radarr_release_group,
+                )
+
+                # Check the release groups are matching, and get a bespoke list of torrents
+                any_to_download = self.get_any_to_download(seadex_dict=seadex_dict)
+
+                if any_to_download:
                     self.log_arr_seadex_mismatch(
                         arr="radarr",
                         seadex_dict=seadex_dict,
