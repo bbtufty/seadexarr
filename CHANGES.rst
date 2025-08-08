@@ -1,6 +1,7 @@
-0.4.2 (Unreleased)
+0.5.0 (Unreleased)
 ==================
 
+- Include SeaDex tags in log and Discord messages
 - Add options to ignore unmonitored series/movies
 - Save logs to file
 - Ensure SCHEDULE_TIME is brought in as a float
