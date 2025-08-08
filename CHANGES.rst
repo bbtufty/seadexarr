@@ -1,4 +1,4 @@
-0.5.0 (Unreleased)
+0.5.0 (2025-08-08)
 ==================
 
 - Fix UTF-8 encoding warning in log
