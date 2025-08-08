@@ -398,19 +398,21 @@ class SeaDexArr:
             if any_dual_audio:
                 final_torrent_list = [t for t in final_torrent_list if t.is_dual_audio]
 
-        # Pull out release groups, URLs, and hashes from the final list we have
-        # as a dictionary
+        # Pull out release groups, URLs, and various other useful info as a
+        # dictionary
         seadex_release_groups = {}
         for t in final_torrent_list:
 
             if t.release_group not in seadex_release_groups:
-                seadex_release_groups[t.release_group] = {"url": {}}
+                seadex_release_groups[t.release_group] = {"urls": {}}
                 seadex_release_groups[t.release_group]["tags"] = t.tags
 
-            seadex_release_groups[t.release_group]["url"][t.url] = {
+            seadex_release_groups[t.release_group]["urls"][t.url] = {
                 "url": t.url,
+                "files": [f.name for f in t.files],
                 "tracker": t.tracker,
                 "hash": t.infohash,
+                "download": False,
             }
         return seadex_release_groups
 
@@ -537,25 +539,218 @@ class SeaDexArr:
         # SeaDex options with links
         for srg, srg_item in seadex_dict.items():
 
-            # Include any tags in the string
-            discord_value = ""
-            if len(srg_item["tags"]) > 0:
-                discord_value += "Tags:\n"
-                discord_value += "\n".join(srg_item["tags"])
-                discord_value += "\n\n"
+            # Check if we're actually downloading anything
+            dl = [srg_item["urls"][x]["download"] for x in srg_item["urls"]]
 
-            # And include and URLs
-            discord_value += "Links:\n"
-            discord_value += "\n".join(srg_item["url"])
+            if any(dl):
 
-            field_dict = {
-                "name": f"SeaDex recommendation: {srg}",
-                "value": discord_value,
-            }
+                # Include any tags in the string
+                discord_value = ""
+                if len(srg_item["tags"]) > 0:
+                    discord_value += "Tags:\n"
+                    discord_value += "\n".join(srg_item["tags"])
+                    discord_value += "\n\n"
 
-            fields.append(field_dict)
+                urls_to_download = [x for i, x in enumerate(srg_item["urls"]) if dl[i]]
+
+                # And include URLs for files we're downloading
+                discord_value += "Links:\n"
+                discord_value += "\n".join(urls_to_download)
+
+                field_dict = {
+                    "name": f"SeaDex recommendation: {srg}",
+                    "value": f"{discord_value}",
+                }
+
+                fields.append(field_dict)
 
         return fields, anilist_thumb
+
+    def filter_seadex_downloads(
+        self,
+        seadex_dict,
+        arr,
+        arr_release_groups,
+        ep_list=None,
+    ):
+        """Flip the switch on whether we're downloading this torrent or not
+
+        Args:
+            seadex_dict: Dictionary of SeaDex releases
+            arr: Type of arr instance
+            arr_release_groups: List of arr release groups
+            ep_list: List of episodes. Defaults to None
+        """
+
+        # If the release group is a string, list it here
+        if isinstance(arr_release_groups, str):
+            arr_release_groups = [arr_release_groups]
+
+        # If we have overlaps, get a note of them here
+        all_seadex_rgs_per_episode = {}
+        if len(seadex_dict) > 1:
+            for seadex_rg in seadex_dict:
+                for url in seadex_dict[seadex_rg]["urls"]:
+                    seadex_episodes = seadex_dict[seadex_rg]["urls"][url].get(
+                        "episodes", []
+                    )
+
+                    found_episodes = [False] * len(seadex_episodes)
+
+                    for seadex_idx, seadex_ep in enumerate(seadex_episodes):
+
+                        if found_episodes[seadex_idx]:
+                            continue
+
+                        for sonarr_ep in ep_list:
+                            sonarr_ep_season = sonarr_ep["seasonNumber"]
+                            sonarr_ep_episode = sonarr_ep["episodeNumber"]
+
+                            # Do we have a match?
+                            if (
+                                sonarr_ep_season == seadex_ep["season"]
+                                and sonarr_ep_episode == seadex_ep["episode"]
+                            ):
+
+                                season_key = (
+                                    f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
+                                )
+                                if season_key not in all_seadex_rgs_per_episode:
+                                    all_seadex_rgs_per_episode[season_key] = []
+
+                                if (
+                                    seadex_rg
+                                    not in all_seadex_rgs_per_episode[season_key]
+                                ):
+                                    all_seadex_rgs_per_episode[season_key].append(
+                                        seadex_rg
+                                    )
+
+                                found_episodes[seadex_idx] = True
+
+        for seadex_rg in seadex_dict:
+
+            for url in seadex_dict[seadex_rg]["urls"]:
+
+                seadex_episodes = seadex_dict[seadex_rg]["urls"][url].get(
+                    "episodes", []
+                )
+
+                # Simple case, we have no episode mappings so
+                # just fall back to checking against release group
+                if len(seadex_episodes) == 0:
+                    if seadex_rg not in arr_release_groups:
+
+                        self.logger.debug(
+                            left_aligned_string(
+                                f"SeaDex release group {seadex_rg} not in {arr.capitalize()} release(s): "
+                                f"{','.join(arr_release_groups)}. "
+                                f"Will add {url} to downloads",
+                                total_length=self.log_line_length,
+                            )
+                        )
+
+                        seadex_dict[seadex_rg]["urls"][url]["download"] = True
+
+                else:
+
+                    # At this point, we need an episode list from Sonarr
+                    if ep_list is None:
+                        raise Warning(
+                            "If checking against individual episodes, you need to pass the Sonarr ep_list"
+                        )
+
+                    # For each episode we've parsed from the torrent, check if a) it exists in the Sonarr list, and
+                    # if so, b) if the release group matches. If there's any mismatch at all, flip the switch to True
+
+                    found_episodes = [False] * len(seadex_episodes)
+
+                    for seadex_idx, seadex_ep in enumerate(seadex_episodes):
+
+                        if found_episodes[seadex_idx]:
+                            continue
+
+                        for sonarr_ep in ep_list:
+
+                            sonarr_ep_season = sonarr_ep["seasonNumber"]
+                            sonarr_ep_episode = sonarr_ep["episodeNumber"]
+
+                            # Do we have a match?
+                            if (
+                                sonarr_ep_season == seadex_ep["season"]
+                                and sonarr_ep_episode == seadex_ep["episode"]
+                            ):
+
+                                season_ep_str = (
+                                    f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
+                                )
+
+                                # Check SeaDex release group matches the episode release group in Sonarr
+                                sonarr_rg = sonarr_ep.get("episodeFile", {}).get(
+                                    "releaseGroup", None
+                                )
+
+                                # If not, flag as should be downloaded if it's not already
+                                # in some overlapping release
+                                if sonarr_rg != seadex_rg:
+
+                                    # This check here is to make sure we don't duplicate
+                                    # if there's overlap
+                                    all_seadex_rg = all_seadex_rgs_per_episode.get(
+                                        season_ep_str, []
+                                    )
+
+                                    if sonarr_rg not in all_seadex_rg:
+
+                                        self.logger.debug(
+                                            left_aligned_string(
+                                                f"SeaDex release group {seadex_rg} not the same as "
+                                                f"{arr.capitalize()} release for "
+                                                f"{season_ep_str } {sonarr_rg}. "
+                                                f"Will add {url} to downloads",
+                                                total_length=self.log_line_length,
+                                            )
+                                        )
+
+                                        seadex_dict[seadex_rg]["urls"][url][
+                                            "download"
+                                        ] = True
+
+                                else:
+
+                                    self.logger.debug(
+                                        left_aligned_string(
+                                            f"SeaDex release group {seadex_rg} matches {arr.capitalize()} "
+                                            f"release for {season_ep_str }.",
+                                            total_length=self.log_line_length,
+                                        )
+                                    )
+
+                                found_episodes[seadex_idx] = True
+
+        return seadex_dict
+
+    @staticmethod
+    def get_any_to_download(seadex_dict):
+        """Check if any torrents are marked as to download
+
+        Args:
+            seadex_dict (dict): Dictionary of SeaDex releases
+        """
+
+        any_to_download = False
+        for rg in seadex_dict:
+
+            if any_to_download:
+                return any_to_download
+
+            dl = [
+                seadex_dict[rg]["urls"][x]["download"] for x in seadex_dict[rg]["urls"]
+            ]
+            if any(dl):
+                any_to_download = True
+
+        return any_to_download
 
     def add_torrent(
         self,
@@ -581,9 +776,9 @@ class SeaDexArr:
                 )
             )
 
-            for url in srg_item["url"]:
-                item_hash = srg_item["url"][url]["hash"]
-                tracker = srg_item["url"][url]["tracker"]
+            for url in srg_item["urls"]:
+                item_hash = srg_item["urls"][url]["hash"]
+                tracker = srg_item["urls"][url]["tracker"]
 
                 # If we don't have a tracker from our list selected, then
                 # get out of here
@@ -972,27 +1167,29 @@ class SeaDexArr:
         # SeaDex options with links
         for srg, srg_item in seadex_dict.items():
 
-            self.logger.info(
-                left_aligned_string(
-                    f"{srg}:",
-                    total_length=self.log_line_length,
-                )
-            )
-            if len(srg_item["tags"]) > 0:
+            dl = [srg_item["urls"][x]["download"] for x in srg_item["urls"]]
+            if any(dl):
                 self.logger.info(
                     left_aligned_string(
-                        f"   Tags: {','.join([t for t in srg_item['tags']])}",
+                        f"{srg}:",
                         total_length=self.log_line_length,
                     )
                 )
-
-            for url in srg_item["url"]:
-                self.logger.info(
-                    left_aligned_string(
-                        f"   {url}",
-                        total_length=self.log_line_length,
+                if len(srg_item["tags"]) > 0:
+                    self.logger.info(
+                        left_aligned_string(
+                            f"   Tags: {','.join([t for t in srg_item['tags']])}",
+                            total_length=self.log_line_length,
+                        )
                     )
-                )
+                for url in srg_item["urls"]:
+                    if srg_item["urls"][url]["download"]:
+                        self.logger.info(
+                            left_aligned_string(
+                                f"   {url}",
+                                total_length=self.log_line_length,
+                            )
+                        )
 
         return True
 
