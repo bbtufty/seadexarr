@@ -864,7 +864,7 @@ class SeaDexArr:
         """
 
         # Ensure we don't already have the hash in there
-        torr_info = self.qbit.torrents_info()
+        torr_info = self.qbit.torrents_info(torrent_hashes=torrent_hash)
         torr_hashes = [i.hash for i in torr_info]
 
         if torrent_hash in torr_hashes:
