@@ -780,6 +780,10 @@ class SeaDexArr:
                 item_hash = srg_item["urls"][url]["hash"]
                 tracker = srg_item["urls"][url]["tracker"]
 
+                # If not flagged for download, then skip
+                if not srg_item["urls"][url]["download"]:
+                    continue
+
                 # If we don't have a tracker from our list selected, then
                 # get out of here
                 if tracker.lower() not in self.trackers:
