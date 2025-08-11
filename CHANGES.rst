@@ -1,3 +1,9 @@
+0.6.0 (Unreleased)
+==================
+
+- Skip adding downloads to torrent client if download flag not set
+- Fix bug where maximum number of torrents added was not respected
+
 0.5.0 (2025-08-08)
 ==================
 
