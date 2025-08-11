@@ -1,6 +1,8 @@
 0.6.0 (Unreleased)
 ==================
 
+- Search specifically in qBittorrent by torrent hash, to speed up hash
+  checks
 - Skip adding downloads to torrent client if download flag not set
 - Fix bug where maximum number of torrents added was not respected
 
