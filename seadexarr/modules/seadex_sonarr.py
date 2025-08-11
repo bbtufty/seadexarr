@@ -354,6 +354,12 @@ class SeaDexSonarr(SeaDexArr):
                                 fields=fields,
                                 thumb_url=anilist_thumb,
                             )
+
+                        if self.max_torrents_to_add is not None:
+                            if self.torrents_added >= self.max_torrents_to_add:
+                                self.log_max_torrents_added()
+                                return True
+
                 else:
 
                     self.logger.info(

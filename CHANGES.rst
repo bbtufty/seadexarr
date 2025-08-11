@@ -1,3 +1,8 @@
+0.6.0 (Unreleased)
+==================
+
+- Fix bug where maximum number of torrents added was not respected
+
 0.5.0 (2025-08-08)
 ==================
 
