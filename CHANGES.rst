@@ -1,4 +1,4 @@
-0.6.0 (Unreleased)
+0.6.0 (2025-0813)
 ==================
 
 - Take Ja-only releases if ``prefer_dual_audio`` is False
