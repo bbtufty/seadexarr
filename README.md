@@ -56,6 +56,19 @@ cd seadexarr
 pip install -e .
 ```
 
+## How SeaDexArr chooses a release
+
+SeaDexArr performs a number of cuts to get to a single best release for you. First, it will filter out all torrents
+coming from trackers that haven't been specified (if you haven't been more granular, this will be all public trackers
+and potentially all private trackers; see ``trackers``). Then, if you only want public torrents (``public_only``), it
+will filter out anything from a private tracker. Next, if you only want to grab releases marked by SeaDex as "best"
+(``want_best``), it will down-select any torrents marked as "best", as long as there's at least one. Finally, if
+you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as there's at least
+one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio torrents (so long
+as there's at least one not tagged as dual-audio). By doing this, SeaDexArr should generally find a single best
+torrent, though if you're in interactive mode (``interactive``) and there are multiple options that match your
+criteria, it will give you an option to select one (or multiple).
+
 ## Usage
 
 To run SeaDexArr, the Python code is simple:
@@ -108,28 +121,25 @@ description of each is given below.
 ### SeaDex filters
 
 - `public_only`: Will only return results from public trackers. Defaults to True
-- `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. Defaults to True
+- `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. If False, will instead prefer Ja-only 
+  releases. Defaults to True
 - `want_best`: Prefer results tagged as best, if any exist. Defaults to True
 - `trackers`: Can manually select a list of trackers. Defaults to None, which will use all the 
-  public trackers and private trackers if `public_only` is False. All possible trackers are below,
-  but currently there is only support for parsing Nyaa
-
-```
-trackers:
-# Public trackers
-- Nyaa
-- AnimeTosho
-- AniDex
-- RuTracker
-# Private trackers
-- AB
-- BeyondHD
-- PassThePopcorn
-- BroadcastTheNet
-- HDBits
-- Blutopia
-- Aither
-```
+  public trackers and private trackers if `public_only` is False. All possible trackers and whether they are supported 
+  are below.
+  - Public trackers
+    - Nyaa (supported)
+    - AnimeTosho (supported)
+    - AniDex
+    - RuTracker
+  - Private trackers
+    - AB
+    - BeyondHD
+    - PassThePopcorn
+    - BroadcastTheNet
+    - HDBits
+    - Blutopia
+    - Aither
 
 ### Advanced settings
 
@@ -150,4 +160,4 @@ trackers:
 - Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
   more robust mapping between AniDB entries and AniList entries
 - Support for other torrent clients
-- Support for torrents on sites other than Nyaa
+- Support for more torrent sites
