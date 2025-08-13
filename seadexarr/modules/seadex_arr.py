@@ -401,6 +401,12 @@ class SeaDexArr:
             if any_dual_audio:
                 final_torrent_list = [t for t in final_torrent_list if t.is_dual_audio]
 
+        # Or, if it's False, do the opposite
+        else:
+            any_ja_audio = any([not t.is_dual_audio for t in final_torrent_list])
+            if any_ja_audio:
+                final_torrent_list = [t for t in final_torrent_list if not t.is_dual_audio]
+
         # Pull out release groups, URLs, and various other useful info as a
         # dictionary
         seadex_release_groups = {}
@@ -1075,7 +1081,7 @@ class SeaDexArr:
         """Produce a log message if no SeaDex entry is found
 
         Args:
-            al_id (str): Al ID
+            al_id (int): Al ID
         """
 
         self.logger.debug(

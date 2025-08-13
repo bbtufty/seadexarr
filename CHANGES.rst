@@ -1,6 +1,7 @@
 0.6.0 (Unreleased)
 ==================
 
+- Take Ja-only releases if ``prefer_dual_audio`` is False
 - Catch crash if SeaDex is unreachable
 - Cleanup dictionaries
 - Search specifically in qBittorrent by torrent hash, to speed up hash
