@@ -1,6 +1,8 @@
 0.6.0 (Unreleased)
 ==================
 
+- Catch crash if SeaDex is unreachable
+- Cleanup dictionaries
 - Search specifically in qBittorrent by torrent hash, to speed up hash
   checks
 - Skip adding downloads to torrent client if download flag not set

@@ -6,6 +6,7 @@ from datetime import datetime
 from urllib.request import urlretrieve
 from xml.etree import ElementTree
 
+import httpx
 import qbittorrentapi
 import yaml
 from ruamel.yaml import YAML
@@ -267,6 +268,8 @@ class SeaDexArr:
             sd_entry = self.seadex.from_id(al_id)
         except EntryNotFoundError:
             pass
+        except httpx.ConnectError:
+            raise Warning("Could not connect to SeaDex. Website may be down")
 
         return sd_entry
 
@@ -540,15 +543,19 @@ class SeaDexArr:
         for srg, srg_item in seadex_dict.items():
 
             # Check if we're actually downloading anything
-            dl = [srg_item["urls"][x]["download"] for x in srg_item["urls"]]
+            dl = [
+                srg_item.get("urls", {}).get(x, {}).get("download", False)
+                for x in srg_item["urls"]
+            ]
 
             if any(dl):
 
                 # Include any tags in the string
                 discord_value = ""
-                if len(srg_item["tags"]) > 0:
+                tags = srg_item.get("tags", [])
+                if len(tags) > 0:
                     discord_value += "Tags:\n"
-                    discord_value += "\n".join(srg_item["tags"])
+                    discord_value += "\n".join(tags)
                     discord_value += "\n\n"
 
                 urls_to_download = [x for i, x in enumerate(srg_item["urls"]) if dl[i]]
@@ -589,11 +596,11 @@ class SeaDexArr:
         # If we have overlaps, get a note of them here
         all_seadex_rgs_per_episode = {}
         if len(seadex_dict) > 1:
-            for seadex_rg in seadex_dict:
-                for url in seadex_dict[seadex_rg]["urls"]:
-                    seadex_episodes = seadex_dict[seadex_rg]["urls"][url].get(
-                        "episodes", []
-                    )
+            for seadex_rg, seadex_rg_item in seadex_dict.items():
+                seadex_urls = seadex_rg_item.get("urls", {})
+                for url, url_item in seadex_urls.items():
+
+                    seadex_episodes = url_item.get("episodes", [])
 
                     found_episodes = [False] * len(seadex_episodes)
 
@@ -603,14 +610,13 @@ class SeaDexArr:
                             continue
 
                         for sonarr_ep in ep_list:
-                            sonarr_ep_season = sonarr_ep["seasonNumber"]
-                            sonarr_ep_episode = sonarr_ep["episodeNumber"]
+                            sonarr_ep_season = sonarr_ep.get("seasonNumber", 999)
+                            sonarr_ep_episode = sonarr_ep.get("episodeNumber", 999)
 
                             # Do we have a match?
-                            if (
-                                sonarr_ep_season == seadex_ep["season"]
-                                and sonarr_ep_episode == seadex_ep["episode"]
-                            ):
+                            if sonarr_ep_season == seadex_ep.get(
+                                "season", 888
+                            ) and sonarr_ep_episode == seadex_ep.get("episode", 888):
 
                                 season_key = (
                                     f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
@@ -628,13 +634,11 @@ class SeaDexArr:
 
                                 found_episodes[seadex_idx] = True
 
-        for seadex_rg in seadex_dict:
+        for seadex_rg, seadex_rg_item in seadex_dict.items():
+            seadex_urls = seadex_rg_item.get("urls", {})
+            for url, url_item in seadex_urls.items():
 
-            for url in seadex_dict[seadex_rg]["urls"]:
-
-                seadex_episodes = seadex_dict[seadex_rg]["urls"][url].get(
-                    "episodes", []
-                )
+                seadex_episodes = url_item.get("episodes", [])
 
                 # Simple case, we have no episode mappings so
                 # just fall back to checking against release group
@@ -650,7 +654,7 @@ class SeaDexArr:
                             )
                         )
 
-                        seadex_dict[seadex_rg]["urls"][url]["download"] = True
+                        url_item.update({"download": True})
 
                 else:
 
@@ -672,14 +676,13 @@ class SeaDexArr:
 
                         for sonarr_ep in ep_list:
 
-                            sonarr_ep_season = sonarr_ep["seasonNumber"]
-                            sonarr_ep_episode = sonarr_ep["episodeNumber"]
+                            sonarr_ep_season = sonarr_ep.get("seasonNumber", 999)
+                            sonarr_ep_episode = sonarr_ep.get("episodeNumber", 999)
 
                             # Do we have a match?
-                            if (
-                                sonarr_ep_season == seadex_ep["season"]
-                                and sonarr_ep_episode == seadex_ep["episode"]
-                            ):
+                            if sonarr_ep_season == seadex_ep.get(
+                                "season", 888
+                            ) and sonarr_ep_episode == seadex_ep.get("episode", 888):
 
                                 season_ep_str = (
                                     f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
@@ -712,9 +715,7 @@ class SeaDexArr:
                                             )
                                         )
 
-                                        seadex_dict[seadex_rg]["urls"][url][
-                                            "download"
-                                        ] = True
+                                        url_item.update({"download": True})
 
                                 else:
 
@@ -745,7 +746,8 @@ class SeaDexArr:
                 return any_to_download
 
             dl = [
-                seadex_dict[rg]["urls"][x]["download"] for x in seadex_dict[rg]["urls"]
+                seadex_dict[rg]["urls"][x].get("download", False)
+                for x in seadex_dict[rg]["urls"]
             ]
             if any(dl):
                 any_to_download = True
@@ -776,13 +778,16 @@ class SeaDexArr:
                 )
             )
 
-            for url in srg_item["urls"]:
-                item_hash = srg_item["urls"][url]["hash"]
-                tracker = srg_item["urls"][url]["tracker"]
+            seadex_urls = srg_item.get("urls", {})
+            for url, url_item in seadex_urls.items():
 
                 # If not flagged for download, then skip
-                if not srg_item["urls"][url]["download"]:
+                download = url_item.get("download", False)
+                if not download:
                     continue
+
+                item_hash = url_item.get("hash", None)
+                tracker = url_item.get("tracker", None)
 
                 # If we don't have a tracker from our list selected, then
                 # get out of here
@@ -1171,7 +1176,10 @@ class SeaDexArr:
         # SeaDex options with links
         for srg, srg_item in seadex_dict.items():
 
-            dl = [srg_item["urls"][x]["download"] for x in srg_item["urls"]]
+            dl = [
+                srg_item.get("urls", {}).get(x, {}).get("download", False)
+                for x in srg_item.get("urls", {})
+            ]
             if any(dl):
                 self.logger.info(
                     left_aligned_string(
@@ -1179,15 +1187,20 @@ class SeaDexArr:
                         total_length=self.log_line_length,
                     )
                 )
-                if len(srg_item["tags"]) > 0:
+                tags = srg_item.get("tags", [])
+                if len(tags) > 0:
                     self.logger.info(
                         left_aligned_string(
-                            f"   Tags: {','.join([t for t in srg_item['tags']])}",
+                            f"   Tags: {','.join([t for t in tags])}",
                             total_length=self.log_line_length,
                         )
                     )
-                for url in srg_item["urls"]:
-                    if srg_item["urls"][url]["download"]:
+                for url in srg_item.get("urls", {}):
+
+                    download = (
+                        srg_item.get("url", {}).get(url, {}).get("download", False)
+                    )
+                    if download:
                         self.logger.info(
                             left_aligned_string(
                                 f"   {url}",

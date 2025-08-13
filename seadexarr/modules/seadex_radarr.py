@@ -305,7 +305,7 @@ class SeaDexRadarr(SeaDexArr):
         )
         mov_req = requests.get(mov_req_url)
 
-        radarr_release_group = [r["releaseGroup"] for r in mov_req.json()]
+        radarr_release_group = [r.get("releaseGroup", None) for r in mov_req.json()]
 
         # If we have multiple options, throw up an error
         if len(radarr_release_group) > 1:

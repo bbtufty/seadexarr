@@ -1,5 +1,3 @@
-import warnings
-
 import copy
 import time
 import os
@@ -66,8 +64,8 @@ def get_overlapping_results(seadex_dict):
 
                 intersect = list(
                     filter(
-                        lambda x: x in seadex_dict[rg1]["all_episodes"],
-                        seadex_dict[rg2]["all_episodes"],
+                        lambda x: x in seadex_dict.get(rg1, {}).get("all_episodes", []),
+                        seadex_dict.get(rg2, {}).get("all_episodes", []),
                     )
                 )
                 if len(intersect) > 0:
@@ -482,7 +480,10 @@ class SeaDexSonarr(SeaDexArr):
         ep_list = eps_req.json()
 
         # Sort by season/episode number for slicing later
-        ep_list = sorted(ep_list, key=lambda x: (x["seasonNumber"], x["episodeNumber"]))
+        ep_list = sorted(
+            ep_list,
+            key=lambda x: (x.get("seasonNumber", None), x.get("episodeNumber", None)),
+        )
 
         # Filter down here by various things
         final_ep_list = []
@@ -491,13 +492,14 @@ class SeaDexSonarr(SeaDexArr):
             include_episode = True
 
             # First, check by season
+            season_number = ep.get("seasonNumber", None)
 
             # If the TVDB season is -1, this is anything but specials
-            if tvdb_season == -1 and ep["seasonNumber"] == 0:
+            if tvdb_season == -1 and season_number == 0:
                 include_episode = False
 
             # Else, if we have a season defined, and it doesn't match, don't include
-            elif tvdb_season != -1 and ep["seasonNumber"] != tvdb_season:
+            elif tvdb_season != -1 and season_number != tvdb_season:
                 include_episode = False
 
             # If we've passed the vibe check, include things now
@@ -566,9 +568,13 @@ class SeaDexSonarr(SeaDexArr):
 
             # See if we have the mapping for each entry
             for ep in final_ep_list:
+
+                season_number = ep.get("seasonNumber", None)
+                episode_number = ep.get("episodeNumber", None)
+
                 anidb_mapping_dict_entry = anidb_mapping_dict.get(
-                    ep["seasonNumber"], {}
-                ).get(ep["episodeNumber"], None)
+                    season_number, {}
+                ).get(episode_number, None)
                 if anidb_mapping_dict_entry is not None:
                     anidb_final_ep_list.append(ep)
 
@@ -601,7 +607,7 @@ class SeaDexSonarr(SeaDexArr):
         for ep in ep_list:
 
             # Get missing episodes, then skip
-            if ep["episodeFileId"] == 0:
+            if ep.get("episodeFileId", 0) == 0:
                 missing_eps += 1
                 continue
 
@@ -637,17 +643,17 @@ class SeaDexSonarr(SeaDexArr):
             seadex_dict (dict): Dictionary of seadex releases
         """
 
-        for release_group in seadex_dict:
+        for release_group, release_group_item in seadex_dict.items():
 
             # Set up an overall "all episodes" list
-            seadex_dict[release_group]["all_episodes"] = []
+            release_group_item.update({"all_episodes": []})
 
-            for url in seadex_dict[release_group]["urls"]:
+            for url, url_item in release_group_item.get("urls", {}).items():
 
                 # Set up a list to parse episodes from files
-                seadex_dict[release_group]["urls"][url]["episodes"] = []
+                url_item.update({"episodes": []})
 
-                for seadex_file in seadex_dict[release_group]["urls"][url]["files"]:
+                for seadex_file in url_item.get("files", []):
 
                     # Get basename from the file, and encode it through for the API
                     # query
@@ -681,13 +687,15 @@ class SeaDexSonarr(SeaDexArr):
                             raise ValueError("Season or episode has come up None")
 
                         self.logger.debug(
-                            left_aligned_string(f"{f} mapped to: S{season:02d}E{episode:02d}")
+                            left_aligned_string(
+                                f"{f} mapped to: S{season:02d}E{episode:02d}"
+                            )
                         )
 
-                        seadex_dict[release_group]["urls"][url]["episodes"].append(
+                        url_item["episodes"].append(
                             {"season": season, "episode": episode}
                         )
-                        seadex_dict[release_group]["all_episodes"].append(
+                        release_group_item["all_episodes"].append(
                             {"season": season, "episode": episode}
                         )
 

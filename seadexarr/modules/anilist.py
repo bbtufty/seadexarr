@@ -64,7 +64,7 @@ def get_anilist_n_eps(
         al_cache[al_id] = copy.deepcopy(j)
 
     # Pull out number of episodes
-    n_eps = j["data"]["Media"]["episodes"]
+    n_eps = j.get("data", {}).get("Media", {}).get("episodes", None)
 
     return n_eps, al_cache
 
@@ -92,9 +92,9 @@ def get_anilist_title(
         al_cache[al_id] = copy.deepcopy(j)
 
     # Prefer the english title, but fall back to romaji
-    title = j["data"]["Media"]["title"].get("english", None)
+    title = j.get("data", {}).get("Media", {}).get("title", {}).get("english", None)
     if title is None:
-        title = j["data"]["Media"]["title"].get("romaji", None)
+        title = j.get("data", {}).get("Media", {}).get("title", {}).get("romaji", None)
 
     return title, al_cache
 
@@ -121,7 +121,7 @@ def get_anilist_thumb(
         j = get_query(al_id)
         al_cache[al_id] = copy.deepcopy(j)
 
-    thumb = j["data"]["Media"]["coverImage"]["large"]
+    thumb = j.get("data", {}).get("Media", {}).get("coverImage", {}).get("large", None)
 
     return thumb, al_cache
 
@@ -148,6 +148,6 @@ def get_anilist_format(
         j = get_query(al_id)
         al_cache[al_id] = copy.deepcopy(j)
 
-    al_format = j["data"]["Media"]["format"]
+    al_format = j.get("data", {}).get("Media", {}).get("format", None)
 
     return al_format, al_cache
