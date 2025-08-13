@@ -52,7 +52,8 @@ def get_animetosho_url(url):
         if parsed_url is not None:
             continue
 
-        if i["link"] == url:
-            parsed_url = i["torrent_url"]
+        link = i.get("link", None)
+        if link == url:
+            parsed_url = i.get("torrent_url", None)
 
     return parsed_url

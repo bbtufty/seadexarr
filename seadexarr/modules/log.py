@@ -80,7 +80,9 @@ def setup_logger(
     )
 
     # Create a RotatingFileHandler for log files
-    handler = RotatingFileHandler(log_file, delay=True, mode="w", encoding="utf-8", backupCount=max_logs)
+    handler = RotatingFileHandler(
+        log_file, delay=True, mode="w", encoding="utf-8", backupCount=max_logs
+    )
     handler.setFormatter(logfile_formatter)
 
     # Add the file handler to the logger
