@@ -125,21 +125,14 @@ description of each is given below.
   releases. Defaults to True
 - `want_best`: Prefer results tagged as best, if any exist. Defaults to True
 - `trackers`: Can manually select a list of trackers. Defaults to None, which will use all the 
-  public trackers and private trackers if `public_only` is False. All possible trackers and whether they are supported 
-  are below.
+  public trackers and private trackers if `public_only` is False. All trackers with torrents on SeaDex, and whether 
+  they are supported are below.
   - Public trackers
     - Nyaa (supported)
     - AnimeTosho (supported)
-    - AniDex
     - RuTracker (supported)
   - Private trackers
     - AB
-    - BeyondHD
-    - PassThePopcorn
-    - BroadcastTheNet
-    - HDBits
-    - Blutopia
-    - Aither
 
 ### Advanced settings
 
