@@ -1,6 +1,7 @@
 0.7.0 (Unreleased)
 ==================
 
+- Removed trackers that aren't used by SeaDex
 - Add support for RuTracker
 
 0.6.0 (2025-0813)

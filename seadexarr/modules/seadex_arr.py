@@ -31,18 +31,18 @@ ALLOWED_ARRS = [
 PUBLIC_TRACKERS = [
     "Nyaa",
     "AnimeTosho",
-    "AniDex",
+    # "AniDex",
     "RuTracker",
 ]
 
 PRIVATE_TRACKERS = [
     "AB",
-    "BeyondHD",
-    "PassThePopcorn",
-    "BroadcastTheNet",
-    "HDBits",
-    "Blutopia",
-    "Aither",
+    # "BeyondHD",
+    # "PassThePopcorn",
+    # "BroadcastTheNet",
+    # "HDBits",
+    # "Blutopia",
+    # "Aither",
 ]
 
 
