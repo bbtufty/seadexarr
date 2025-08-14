@@ -131,7 +131,7 @@ description of each is given below.
     - Nyaa (supported)
     - AnimeTosho (supported)
     - AniDex
-    - RuTracker
+    - RuTracker (supported)
   - Private trackers
     - AB
     - BeyondHD

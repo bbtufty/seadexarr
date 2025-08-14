@@ -14,7 +14,11 @@ from seadex import SeaDexEntry, EntryNotFoundError
 
 from .anilist import get_anilist_title, get_anilist_thumb
 from .log import setup_logger, centred_string, left_aligned_string
-from .torrent import get_nyaa_url, get_animetosho_url
+from .torrent import (
+    get_nyaa_url,
+    get_animetosho_url,
+    get_rutracker_url,
+)
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
@@ -405,7 +409,9 @@ class SeaDexArr:
         else:
             any_ja_audio = any([not t.is_dual_audio for t in final_torrent_list])
             if any_ja_audio:
-                final_torrent_list = [t for t in final_torrent_list if not t.is_dual_audio]
+                final_torrent_list = [
+                    t for t in final_torrent_list if not t.is_dual_audio
+                ]
 
         # Pull out release groups, URLs, and various other useful info as a
         # dictionary
@@ -813,6 +819,13 @@ class SeaDexArr:
                 # AnimeTosho
                 elif tracker.lower() == "animetosho":
                     parsed_url = get_animetosho_url(url=url)
+
+                # RuTracker
+                elif tracker.lower() == "rutracker":
+                    parsed_url = get_rutracker_url(
+                        url=url,
+                        torrent_hash=item_hash,
+                    )
 
                 # Otherwise, bug out
                 else:
