@@ -206,7 +206,7 @@ class SeaDexRadarr(SeaDexArr):
 
                     self.logger.info(
                         centred_string(
-                            f"You already have the recommended release(s) for this title",
+                            "You already have the recommended release(s) for this title",
                             total_length=self.log_line_length,
                         )
                     )

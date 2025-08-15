@@ -35,7 +35,7 @@ if running_schedule:
     while True:
 
         logger = setup_logger(log_level="INFO")
-        logger.info(f"Running in scheduled mode")
+        logger.info("Running in scheduled mode")
 
         present_time = datetime.now().strftime("%H:%M")
         logger.info(f"Time is {present_time}. Starting run")

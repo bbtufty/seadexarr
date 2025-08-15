@@ -445,13 +445,13 @@ class SeaDexArr:
 
         self.logger.warning(
             centred_string(
-                f"Multiple releases found!:",
+                "Multiple releases found!:",
                 total_length=self.log_line_length,
             )
         )
         self.logger.warning(
             left_aligned_string(
-                f"Here are the SeaDex notes:",
+                "Here are the SeaDex notes:",
                 total_length=self.log_line_length,
             )
         )
@@ -481,8 +481,8 @@ class SeaDexArr:
             )
 
         srgs_to_grab = input(
-            f"Which release do you want to grab? "
-            f"Single number for one, comma separated list for multiple, or blank for all: "
+            "Which release do you want to grab? "
+            "Single number for one, comma separated list for multiple, or blank for all: "
         )
 
         srgs_to_grab = srgs_to_grab.split(",")
@@ -1074,7 +1074,7 @@ class SeaDexArr:
 
         self.logger.debug(
             centred_string(
-                f"-> No AL ID found. Continuing",
+                "-> No AL ID found. Continuing",
                 total_length=self.log_line_length,
             )
         )
@@ -1130,7 +1130,7 @@ class SeaDexArr:
         # Get a string, marking if things are incomplete
         al_str = f"AniList: {anilist_title} ({sd_url})"
         if is_incomplete:
-            al_str += f" [MARKED INCOMPLETE]"
+            al_str += " [MARKED INCOMPLETE]"
 
         self.logger.info(
             centred_string(
@@ -1146,7 +1146,7 @@ class SeaDexArr:
 
         self.logger.info(
             centred_string(
-                f"No suitable releases found on SeaDex",
+                "No suitable releases found on SeaDex",
                 total_length=self.log_line_length,
             )
         )
@@ -1187,7 +1187,7 @@ class SeaDexArr:
         )
         self.logger.info(
             centred_string(
-                f"SeaDex recommended version(s):",
+                "SeaDex recommended version(s):",
                 total_length=self.log_line_length,
             )
         )
