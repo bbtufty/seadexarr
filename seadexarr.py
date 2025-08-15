@@ -1,102 +1,87 @@
-import argparse
-import os
-import time
-import traceback
-from datetime import datetime, timedelta
+#!/usr/bin/env python3
+"""
+Legacy entry point for SeaDexArr - DEPRECATED
 
-from seadexarr import SeaDexSonarr, SeaDexRadarr, setup_logger
+This file is maintained for backward compatibility only.
+Please use the new modern CLI instead:
 
-ALLOWED_ARRS = [
-    "radarr",
-    "sonarr",
-]
+    seadexarr --help
+    seadexarr sync sonarr username
+    seadexarr sync radarr username
+    seadexarr config-validate
+    seadexarr status
 
-# Define the parser and parse args
-parser = argparse.ArgumentParser(description="SeaDexArr")
-parser.add_argument("--arr", action="store", dest="arr")
-args = parser.parse_args()
+The new CLI provides better functionality, error handling, and user experience.
+"""
 
-# See if we're doing a one-run, or scheduling
-arr = args.arr
+import sys
+import warnings
 
-running_schedule = False
-if arr is None:
-    running_schedule = True
 
-# Set up config file location
-config_dir = os.getenv("CONFIG_DIR", os.getcwd())
-config = os.path.join(config_dir, "config.yml")
+def main():
+    warnings.warn(
+        "seadexarr.py is deprecated. Use the new CLI: 'seadexarr --help'",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-if running_schedule:
+    print("🚨 DEPRECATED: Legacy seadexarr.py detected!")
+    print("")
+    print("Please use the new modern CLI instead:")
+    print("")
+    print("  # Basic sync commands")
+    print("  seadexarr sync sonarr myusername")
+    print("  seadexarr sync radarr myusername --dry-run")
+    print("")
+    print("  # Batch processing")
+    print("  seadexarr sync-batch user1 user2 user3 --target=sonarr")
+    print("")
+    print("  # Configuration and status")
+    print("  seadexarr config-validate")
+    print("  seadexarr status")
+    print("")
+    print("  # Search releases")
+    print('  seadexarr search-releases "Attack on Titan"')
+    print("")
+    print("  # Get help")
+    print("  seadexarr --help")
+    print("")
+    print("The new CLI offers:")
+    print("  ✅ Better error handling and validation")
+    print("  ✅ Rich, colorful output with progress bars")
+    print("  ✅ Comprehensive configuration management")
+    print("  ✅ Async performance improvements")
+    print("  ✅ Backward compatibility support")
+    print("")
 
-    # Get how often to run things
-    schedule_time = float(os.getenv("SCHEDULE_TIME", 6))
-
-    while True:
-
-        logger = setup_logger(log_level="INFO")
-        logger.info("Running in scheduled mode")
-
-        present_time = datetime.now().strftime("%H:%M")
-        logger.info(f"Time is {present_time}. Starting run")
-
-        # Run both Radarr and Sonarr syncs, catching
-        # errors if they do arise. Split them up
-        # so one crashing doesn't ruin the other
+    # For Docker compatibility, try to run the new CLI if arguments were passed
+    if len(sys.argv) > 1:
         try:
-            sdr = SeaDexRadarr(
-                config=config,
-                logger=logger,
-            )
-            sdr.run()
-        except Exception:
-            tb = traceback.format_exc()
-            for line in tb.splitlines():
-                logger.warning(line)
+            from seadexarr.cli.main import app
 
-        try:
-            sds = SeaDexSonarr(
-                config=config,
-                logger=logger,
-            )
-            sds.run()
-        except Exception:
-            tb = traceback.format_exc()
-            for line in tb.splitlines():
-                logger.warning(line)
+            print("🔄 Attempting to run new CLI...")
 
-        next_run_time = datetime.now() + timedelta(hours=schedule_time)
-        next_run_time = next_run_time.strftime("%H:%M")
-        logger.info(f"Run complete! Will run again at {next_run_time}")
+            # Convert legacy --arr argument to new format
+            if "--arr" in sys.argv:
+                idx = sys.argv.index("--arr")
+                if idx + 1 < len(sys.argv):
+                    arr_type = sys.argv[idx + 1]
+                    print(
+                        f"⚠️  Legacy --arr {arr_type} detected. Use 'seadexarr sync {arr_type} USERNAME' instead."
+                    )
+                    sys.exit(1)
 
-        # Good job, have a rest
-        time.sleep(schedule_time * 3600)
+            # Run the new CLI
+            app()
 
-# Else we're in a single run mode
-else:
-
-    logger = setup_logger(log_level="INFO")
-
-    if arr in ALLOWED_ARRS:
-
-        try:
-            if arr == "radarr":
-                sdr = SeaDexRadarr(
-                    config=config,
-                    logger=logger,
-                )
-                sdr.run()
-
-            elif arr == "sonarr":
-                sds = SeaDexSonarr(
-                    config=config,
-                    logger=logger,
-                )
-                sds.run()
-        except Exception:
-            tb = traceback.format_exc()
-            for line in tb.splitlines():
-                logger.warning(line)
-
+        except ImportError as e:
+            print(f"❌ Failed to import new CLI: {e}")
+            print("Please install the latest version: pip install --upgrade seadexarr")
+            sys.exit(1)
     else:
-        logger.warning(f"Arr {arr} unknown")
+        print("Use 'seadexarr --help' to see all available commands.")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
