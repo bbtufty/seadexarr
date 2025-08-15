@@ -67,14 +67,9 @@ def setup_logging_for_cli(
     verbose: bool = False, quiet: bool = False, format_type: str = "console"
 ) -> None:
     """Setup logging for CLI operations with proper levels."""
-    if quiet:
-        level = "ERROR"
-    elif verbose:
-        level = "DEBUG"
-    else:
-        level = "INFO"
+    json_logs = format_type == "json"
 
-    logging.configure_logging(log_level=level, log_format=format_type)
+    logging.setup_logging(verbose=verbose, quiet=quiet, json_logs=json_logs)
 
 
 def display_error(message: str, exception: Exception | None = None) -> None:
@@ -1054,7 +1049,7 @@ async def legacy_sync_radarr(
     username: str, settings: Settings, dry_run: bool, verbose: bool
 ):
     """Legacy support for --radarr option."""
-    result = await sync.anilist_to_radarr(username, settings, dry_run)
+    result = await sync.sync_anilist_to_radarr(username, settings, dry_run)
     display_sync_results(
         result, f"Legacy AniList → Radarr Sync for {username}", verbose
     )
