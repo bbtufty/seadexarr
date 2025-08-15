@@ -1,156 +1,343 @@
 # SeaDexArr
 
-[![](https://img.shields.io/pypi/v/seadexarr.svg?label=PyPI&style=flat-square)](https://pypi.org/pypi/seadexarr/)
-[![](https://img.shields.io/pypi/pyversions/seadexarr.svg?label=Python&color=yellow&style=flat-square)](https://pypi.org/pypi/seadexarr/)
-[![Actions](https://img.shields.io/github/actions/workflow/status/bbtufty/seadexarr/build.yaml?branch=main&style=flat-square)](https://github.com/bbtufty/seadexarr/actions)
-[![License](https://img.shields.io/badge/license-GNUv3-blue.svg?label=License&style=flat-square)](LICENSE)
+A modern, production-ready CLI tool for synchronizing your AniList anime and manga lists with Sonarr and Radarr media management systems.
 
-![SeaDexArr](example_post.png)
+## ✨ Features
 
-SeaDexArr is designed as a tool to ensure that you have Anime releases on the Arr apps that match with the best 
-releases tagged on SeaDex. SeaDexArr supports both Sonarr and Radarr.
+- **🔄 Automated Sync**: Keep your Sonarr/Radarr libraries in sync with your AniList
+- **🎯 Smart Configuration**: Platform-aware setup with intelligent defaults  
+- **🚀 Modern CLI**: Beautiful Rich-formatted output with progress indicators
+- **⚡ Async Performance**: Fast, non-blocking operations for better responsiveness
+- **🐳 Docker Ready**: Production-grade containerization with multi-stage builds
+- **🔧 Comprehensive**: Batch operations, search, status checking, and validation
+- **🛡️ Robust**: Structured logging, proper error handling, and retry logic
+- **🔄 Legacy Support**: Backward compatibility for existing workflows
 
-For Sonarr, it works by scanning through series, matching these up via the TVDB or IMDb IDs to AniList 
-mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
-(https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database. It then
-attempts to match these releases to specific episodes, to make the comparison as granular and accurate as possible.
+## 🚀 Quick Start
 
-For Radarr, this works much the same but instead using the TMDB and IMDb IDs.
+### 1. Installation
 
-SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
-automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
-out there.
-
-## Installation
-
-SeaDexArr is available as a Docker container. Into a docker-compose file:
-
-```
-services:
-
-  seadexarr:
-    image: ghcr.io/bbtufty/seadexarr:latest  # or seadexarr:main for the cutting edge
-    container_name: seadexarr
-    environment: 
-      - SCHEDULE_TIME=6  # How often to run, in hours
-    volumes:
-      - /path/to/config:/config
-    restart: unless-stopped
+```bash
+# Install from source
+git clone https://github.com/seadx/seadexarr.git
+cd seadexarr
+pip install -e .
 ```
 
-And then to run on a schedule, simply run `docker-compose up -d seadexarr`. If you want to run one Arr one time, you 
-can instead run like `docker-compose run seadexarr --arr radarr` (swap out radarr for sonarr depending on which you
-want to run).
+### 2. Initialize Configuration
 
-SeaDexArr can also be installed via pip:
+The fastest way to get started is using the `init` command, which creates a platform-specific configuration:
 
+```bash
+# Create .env file with sensible defaults for your platform
+seadexarr init
+
+# Or specify a custom location
+seadexarr init --output=config/production.env
 ```
+
+This will create a comprehensive `.env` file with:
+- Platform-specific service URLs (Windows/Linux/Docker)
+- All required and optional configuration options  
+- Helpful comments and usage examples
+- Environment detection (Docker, Windows, Linux/macOS)
+
+### 3. Configure Your Services
+
+Edit the generated `.env` file with your actual API keys and service URLs:
+
+```bash
+# Required: AniList access token
+SEADEXARR_ANILIST_ACCESS_TOKEN=your_anilist_token
+
+# Required: SeaDx API access  
+SEADEXARR_SEADX_API_KEY=your_seadx_api_key
+
+# Required: Sonarr configuration
+SEADEXARR_SONARR_URL=http://localhost:8989
+SEADEXARR_SONARR_API_KEY=your_sonarr_api_key
+
+# Required: Radarr configuration
+SEADEXARR_RADARR_URL=http://localhost:7878
+SEADEXARR_RADARR_API_KEY=your_radarr_api_key
+```
+
+### 4. Validate Configuration
+
+```bash
+# Check your configuration
+seadexarr config-validate
+
+# Test service connectivity  
+seadexarr status
+```
+
+### 5. Start Syncing
+
+```bash
+# Sync a single user to Sonarr
+seadexarr sync sonarr your_anilist_username
+
+# Preview changes first (dry run)
+seadexarr sync sonarr your_anilist_username --dry-run
+
+# Sync to Radarr for movies
+seadexarr sync radarr your_anilist_username
+
+# Batch sync multiple users
+seadexarr sync-batch user1 user2 user3 --target=sonarr
+```
+
+## 📋 Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `init` | Initialize platform-specific configuration file |
+| `sync sonarr` | Sync AniList anime to Sonarr series |
+| `sync radarr` | Sync AniList movies to Radarr |
+| `sync-batch` | Batch sync multiple users to target service |
+| `search-releases` | Search and preview SeaDx releases |
+| `status` | Check connectivity to all configured services |
+| `config-validate` | Validate current configuration settings |
+| `config-info` | Display current configuration (alias for validate) |
+
+## 📥 Installation
+
+### Python Package (Recommended)
+
+```bash
 pip install seadexarr
 ```
 
-Or the cutting edge via GitHub:
+### Development Installation
 
-```
+```bash
 git clone https://github.com/bbtufty/seadexarr.git
 cd seadexarr
 pip install -e .
 ```
 
-## How SeaDexArr chooses a release
+### Docker
 
-SeaDexArr performs a number of cuts to get to a single best release for you. First, it will filter out all torrents
-coming from trackers that haven't been specified (if you haven't been more granular, this will be all public trackers
-and potentially all private trackers; see ``trackers``). Then, if you only want public torrents (``public_only``), it
-will filter out anything from a private tracker. Next, if you only want to grab releases marked by SeaDex as "best"
-(``want_best``), it will down-select any torrents marked as "best", as long as there's at least one. Finally, if
-you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as there's at least
-one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio torrents (so long
-as there's at least one not tagged as dual-audio). By doing this, SeaDexArr should generally find a single best
-torrent, though if you're in interactive mode (``interactive``) and there are multiple options that match your
-criteria, it will give you an option to select one (or multiple).
-
-## Usage
-
-To run SeaDexArr, the Python code is simple:
-
+```yaml
+services:
+  seadexarr:
+    image: ghcr.io/bbtufty/seadexarr:latest
+    container_name: seadexarr
+    environment: 
+      - SEADEXARR_ANILIST_ACCESS_TOKEN=your_token
+      - SEADEXARR_SEADX_API_KEY=your_key
+      - SEADEXARR_SONARR_URL=http://sonarr:8989
+      - SEADEXARR_SONARR_API_KEY=your_sonarr_key
+      - SEADEXARR_RADARR_URL=http://radarr:7878
+      - SEADEXARR_RADARR_API_KEY=your_radarr_key
+      - SEADEXARR_LOG_LEVEL=INFO
+    volumes:
+      - ./config:/config
+    restart: unless-stopped
 ```
+
+## 📖 CLI Reference
+
+### Main Commands
+
+```bash
+seadexarr --help                    # Show all commands
+seadexarr --verbose                 # Enable verbose output
+seadexarr --quiet                   # Show only errors
+seadexarr --dry-run                 # Preview mode (no changes)
+```
+
+### Sync Commands
+
+```bash
+# Individual sync operations
+seadexarr sync sonarr USERNAME [OPTIONS]
+seadexarr sync radarr USERNAME [OPTIONS]
+
+# Batch operations  
+seadexarr sync-batch USER1 USER2 USER3 [OPTIONS]
+  --target=sonarr|radarr           # Target service
+  --concurrent=N                   # Max concurrent syncs (default: 3)
+  --dry-run                        # Preview changes
+```
+
+### Utility Commands
+
+```bash
+# Search releases
+seadexarr search-releases "TITLE" [OPTIONS]
+  --quality=FILTER                 # Quality filter (can use multiple)
+  --limit=N                        # Max results (default: 10)
+  --dry-run/--download            # Preview or download mode
+
+# System status
+seadexarr status                   # Check all services
+seadexarr config-validate         # Validate configuration
+seadexarr config-info             # Show current config
+```
+
+### Legacy Compatibility
+
+```bash
+# Legacy format still works
+seadexarr --sonarr myusername --dry-run
+seadexarr --radarr myusername --dry-run
+```
+
+## 🛠️ How SeaDexArr Works
+
+SeaDexArr performs intelligent filtering to find the best releases:
+
+1. **Service Integration**: Connects to AniList for user lists, Sonarr/Radarr for media management
+2. **Release Matching**: Maps series via TVDB/IMDb IDs using Kometa and AniDB mappings  
+3. **Quality Filtering**: Applies tracker preferences, quality filters, and SeaDx "best" tags
+4. **Smart Selection**: Chooses optimal releases based on your preferences
+5. **Automated Import**: Adds releases to your torrent client and Arr apps
+
+### Release Selection Criteria
+
+SeaDexArr applies filters in this order:
+
+1. **Tracker Filtering**: Include/exclude specific trackers
+2. **Privacy Filtering**: Public-only or include private trackers  
+3. **Quality Tags**: Prefer "best" tagged releases when available
+4. **Audio Preferences**: Dual audio vs Japanese-only selection
+5. **Final Selection**: Choose best match or prompt for selection
+
+## 🔧 Advanced Configuration
+
+### Logging Configuration
+
+```bash
+# Console output (development)
+SEADEXARR_LOG_FORMAT=console
+SEADEXARR_LOG_LEVEL=DEBUG
+
+# JSON output (production)  
+SEADEXARR_LOG_FORMAT=json
+SEADEXARR_LOG_LEVEL=INFO
+```
+
+### Performance Tuning
+
+```bash
+# Adjust HTTP settings
+SEADEXARR_HTTP_TIMEOUT=60          # Longer timeout for slow networks
+SEADEXARR_HTTP_RETRIES=5           # More retries for reliability
+
+# Batch processing limits
+seadexarr sync-batch users --concurrent=1  # Slower, more reliable
+seadexarr sync-batch users --concurrent=5  # Faster, more aggressive
+```
+
+## 🐳 Docker Usage
+
+### Docker Compose
+
+```yaml
+version: "3.8"
+services:
+  seadexarr:
+    image: ghcr.io/bbtufty/seadexarr:latest
+    container_name: seadexarr
+    environment:
+      # Core configuration
+      - SEADEXARR_ANILIST_ACCESS_TOKEN=${ANILIST_TOKEN}
+      - SEADEXARR_SEADX_API_KEY=${SEADX_API_KEY}
+      
+      # Sonarr integration
+      - SEADEXARR_SONARR_URL=http://sonarr:8989
+      - SEADEXARR_SONARR_API_KEY=${SONARR_API_KEY}
+      
+      # Radarr integration  
+      - SEADEXARR_RADARR_URL=http://radarr:7878
+      - SEADEXARR_RADARR_API_KEY=${RADARR_API_KEY}
+      
+      # Application settings
+      - SEADEXARR_LOG_LEVEL=INFO
+      - SEADEXARR_LOG_FORMAT=json
+      - SEADEXARR_DRY_RUN=false
+      
+    volumes:
+      - ./config:/config
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - sonarr
+      - radarr
+```
+
+### Docker Commands
+
+```bash
+# One-time sync
+docker run --rm --env-file .env ghcr.io/bbtufty/seadexarr:latest sync sonarr myusername
+
+# Check status
+docker run --rm --env-file .env ghcr.io/bbtufty/seadexarr:latest status
+
+# Interactive container
+docker run -it --env-file .env ghcr.io/bbtufty/seadexarr:latest --help
+```
+
+## 🤔 Troubleshooting
+
+### Common Issues
+
+```bash
+# Check configuration
+seadexarr config-validate
+
+# Test connectivity  
+seadexarr status
+
+# Enable debug logging
+seadexarr --verbose sync sonarr myusername
+
+# Validate specific config file
+seadexarr config-validate /path/to/config.env
+```
+
+### Error Resolution
+
+| Error | Solution |
+|-------|----------|
+| `AniList access token not configured` | Set `SEADEXARR_ANILIST_ACCESS_TOKEN` |
+| `SeaDx API key not configured` | Set `SEADEXARR_SEADX_API_KEY` |  
+| `Sonarr URL or API key not configured` | Set `SEADEXARR_SONARR_URL` and `SEADEXARR_SONARR_API_KEY` |
+| `Service unreachable` | Check URLs and network connectivity |
+| `Permission denied` | Verify API keys and user permissions |
+
+## 📜 Legacy Usage (Deprecated)
+
+The old class-based API is still available for backward compatibility:
+
+```python
 from seadexarr import SeaDexSonarr, SeaDexRadarr
 
 sds = SeaDexSonarr()
 sds.run()
 
-sdr = SeaDexRadarr()
+sdr = SeaDexRadarr()  
 sdr.run()
 ```
 
-On the first run, the code will generate a config file in your working directory. This should be populated to your own 
-preference, and then run the code again.
+**⚠️ Note**: Legacy usage is deprecated. Please migrate to the new CLI for better functionality and support.
 
-## Config
+## 🗺️ Roadmap
 
-There are a number of configuration settings to play around with. These should be self-explanatory, but a more detailed
-description of each is given below.
+- **Enhanced Mapping**: Improved episode mapping for OVAs and movies
+- **More Torrent Clients**: Support for additional torrent clients beyond qBittorrent  
+- **Additional Trackers**: Support for more public and private trackers
+- **Web Interface**: Optional web UI for configuration and monitoring
+- **Notification Systems**: Discord, Slack, and webhook notifications
+- **Scheduling**: Built-in cron-like scheduling capabilities
 
-### Arr settings
+## 🤝 Contributing
 
-- `sonarr_url`: URL for Sonarr. Required if running SeaDexSonarr
-- `sonarr_api_key`: API key for Sonarr (Settings/General/API Key). Required if running SeaDexSonarr
-- `ignore_movies_in_radarr`: If True, will not add releases found in Sonarr (movie specials) if they already
-  exist as movies in Radarr. Defaults to False
+Contributions are welcome! Please check the [GitHub repository](https://github.com/bbtufty/seadexarr) for issues and development guidelines.
 
-- `radarr_url`: URL for Radarr. Required if running SeaDexRadarr
-- `radarr_api_key`: API key for Radarr (Settings/General/API Key). Required if running SeaDexRadarr
+## 📄 License
 
-### Torrent settings
-
-- `qbit_info`: Details for qBittorrent. This requires a host URL, username, and password to be set. 
-   Required if using qBittorrent
-- `sonarr_torrent_category`: Sonarr torrent import category, if you have one. Defaults to None, which won't 
-   set a category
-- `radarr_torrent_category`: Radarr torrent import category, if you have one. Defaults to None, which won't 
-   set a category
-- `max_torrents_to_add`: used to limit the number of torrents you add in one run. Defaults to None, which 
-   will just add everything it finds
-
-### Discord settings
-
-- `discord_url`: If you want to use Discord notifications (recommended), then set up a webhook following 
-   [this guide](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) and add the URL
-   here. Defaults to None, which won't use the Discord integration
-
-### SeaDex filters
-
-- `public_only`: Will only return results from public trackers. Defaults to True
-- `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. If False, will instead prefer Ja-only 
-  releases. Defaults to True
-- `want_best`: Prefer results tagged as best, if any exist. Defaults to True
-- `trackers`: Can manually select a list of trackers. Defaults to None, which will use all the 
-  public trackers and private trackers if `public_only` is False. All trackers with torrents on SeaDex, and whether 
-  they are supported are below.
-  - Public trackers
-    - Nyaa (supported)
-    - AnimeTosho (supported)
-    - RuTracker (supported)
-  - Private trackers
-    - AB
-
-### Advanced settings
-
-- `sleep_time`: To avoid hitting API rate limits, after each query SeaDexArr will wait a number 
-   of seconds. Defaults to 2
-- `cache_time`: The mappings files don't change all the time, so are cached for a certain number
-   of days. Defaults to 1
-- `interactive`: If True, will enable interactive mode, which when multiple torrent options are
-   found, will ask for input to choose one. Otherwise, will just grab everything. Defaults to False
-- `anime_mappings`: Can provide custom mappings here. Otherwise, will use the Kometa mappings.
-  The general user should not set this. Defaults to None
-- `anidb_mappings`: Can provide custom mappings here. Otherwise, will use the AniDB mappings.
-  The general user should not set this. Defaults to None
-- `log_level`: Controls the level of logging. Can be WARNING, INFO, or DEBUG. Defaults to "INFO"
-
-## Roadmap
-
-- Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
-  more robust mapping between AniDB entries and AniList entries
-- Support for other torrent clients
-- Support for more torrent sites
+SeaDexArr is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for details.

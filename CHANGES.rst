@@ -1,6 +1,33 @@
 0.7.0 (Unreleased)
 ==================
 
+**Major CLI Overhaul & Modernization**
+
+- **BREAKING**: Complete CLI rewrite using modern Typer framework
+- **NEW**: Rich-formatted output with beautiful tables, progress bars, and colored text
+- **NEW**: Comprehensive command structure with subcommands:
+  
+  - ``seadexarr sync sonarr`` - Sync AniList to Sonarr
+  - ``seadexarr sync radarr`` - Sync AniList to Radarr  
+  - ``seadexarr sync-batch`` - Batch sync multiple users
+  - ``seadexarr search-releases`` - Search SeaDx releases
+  - ``seadexarr status`` - Check service connectivity
+  - ``seadexarr config-validate`` - Validate configuration
+  - ``seadexarr init`` - Initialize platform-specific configuration
+  
+- **NEW**: Smart configuration initialization with platform detection (Windows/Linux/Docker)
+- **NEW**: Enhanced async/await patterns throughout the application
+- **NEW**: Structured logging with ``structlog`` integration
+- **NEW**: Production-ready Docker support with multi-stage builds
+- **NEW**: Comprehensive configuration validation and helpful error messages
+- **NEW**: Backward compatibility layer for legacy CLI usage
+- **NEW**: Interactive help system with examples and usage guidance
+- **IMPROVED**: Error handling with custom exception types
+- **IMPROVED**: Type hints and modern Python practices throughout codebase
+- **IMPROVED**: Code quality with ``ruff`` linting and ``black`` formatting
+- **IMPROVED**: Documentation with updated README and usage examples
+- **FIXED**: All linting issues and code quality concerns
+- **FIXED**: Deprecated legacy entry point with migration guidance
 - Removed trackers that aren't used by SeaDex
 - Add support for RuTracker
 
