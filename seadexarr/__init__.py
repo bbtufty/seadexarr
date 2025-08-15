@@ -1,12 +1,10 @@
-from importlib.metadata import version
+"""
+SeaDexArr - SeaDx Starr Sync
 
-# Get the version
-__version__ = version(__name__)
+A functional, modern Python application for syncing anime from AniList to Sonarr/Radarr.
+"""
 
-from .modules import SeaDexRadarr, SeaDexSonarr, setup_logger
+from . import cli, clients, config, core, utils
 
-__all__ = [
-    "SeaDexRadarr",
-    "SeaDexSonarr",
-    "setup_logger",
-]
+__version__ = "0.6.0"
+__all__ = ["cli", "clients", "config", "core", "utils"]

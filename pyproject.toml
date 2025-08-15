@@ -31,24 +31,52 @@ classifiers = [
 ]
 
 dependencies = [
-    "arrapi == 1.4.13",
-    "beautifulsoup4 == 4.13.4",
-    "colorlog == 6.9.0",
-    "discordwebhook == 1.0.3",
-    "httpx == 0.28.1",
-    "pynyaa == 2.0.0",
-    "PyYAML == 6.0.2",
-    "qbittorrent-api == 2025.7.0",
-    "requests == 2.32.4",
-    "ruamel.yaml == 0.18.14",
-    "seadex == 0.7.2",
+    # Modern async HTTP client (replaces requests)
+    "httpx>=0.27.0,<1.0.0",
+    
+    # Modern CLI framework
+    "typer[all]>=0.9.0,<1.0.0",
+    
+    # Configuration and validation
+    "pydantic>=2.5.0,<3.0.0",
+    "pydantic-settings>=2.1.0,<3.0.0",
+    
+    # Structured logging (replaces colorlog)
+    "structlog>=23.0.0,<25.0.0",
+    
+    # Retry logic with exponential backoff
+    "tenacity>=8.2.0,<9.0.0",
+    
+    # Fast HTML parsing (replaces beautifulsoup4)
+    "selectolax>=0.3.0,<1.0.0",
+    
+    # Rich output formatting
+    "rich>=13.0.0,<14.0.0",
+    
+    # Core SeaDx functionality
+    "seadex>=0.7.0,<1.0.0",
+    
+    # Starr app APIs (Sonarr, Radarr)
+    "arrapi>=1.4.0,<2.0.0",
+    
+    # Torrent functionality
+    "pynyaa>=2.0.0,<3.0.0",
+    "qbittorrent-api>=2025.7.0,<2026.0.0",
 ]
 
 [project.optional-dependencies]
 docs = [
-    "sphinx-automodapi == 0.20.0",
-    "sphinx-rtd-theme == 3.0.2",
+    "sphinx-automodapi>=0.20.0,<1.0.0",
+    "sphinx-rtd-theme>=3.0.0,<4.0.0",
 ]
+dev = [
+    "ruff>=0.1.0,<1.0.0",  # Modern linting and formatting
+    "pytest>=7.0.0,<9.0.0",
+    "pytest-asyncio>=0.21.0,<1.0.0",
+]
+
+[project.scripts]
+seadexarr = "seadexarr.cli.main:app"
 
 [project.urls]
 "Homepage" = "https://github.com/bbtufty/seadexarr"
@@ -57,9 +85,23 @@ docs = [
 
 [build-system]
 requires = [
-    "setuptools == 80.9.0",
-    "wheel == 0.45.1",
-    "setuptools_scm == 9.0.0",
+    "setuptools>=68.0.0",
+    "wheel",
+    "setuptools_scm>=8.0.0",
 ]
-
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "RUF"]
+ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.ruff.lint.isort]
+known-first-party = ["seadexarr"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
