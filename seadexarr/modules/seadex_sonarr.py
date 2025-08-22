@@ -57,15 +57,26 @@ def get_overlapping_results(seadex_dict):
     overlapping_results = False
     if len(seadex_dict) > 0:
         for rg1 in seadex_dict:
+
+            rg1_all_eps = seadex_dict.get(rg1, {}).get("all_episodes", [])
+
             for rg2 in seadex_dict:
 
                 if rg1 == rg2:
                     continue
 
+                rg2_all_eps = seadex_dict.get(rg1, {}).get("all_episodes", [])
+
+                if len(rg2_all_eps) == 0 or len(rg2_all_eps) == 0:
+                    overlapping_results = True
+
+                # Also, if we have an instance where one hasn't been parsed
+                # but the other has, then just assume they overlap
+
                 intersect = list(
                     filter(
-                        lambda x: x in seadex_dict.get(rg1, {}).get("all_episodes", []),
-                        seadex_dict.get(rg2, {}).get("all_episodes", []),
+                        lambda x: x in rg1_all_eps,
+                        rg2_all_eps,
                     )
                 )
                 if len(intersect) > 0:
