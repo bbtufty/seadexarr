@@ -601,18 +601,41 @@ class SeaDexArr:
             ep_list: List of episodes. Defaults to None
         """
 
-        # If the release group is a string, list it here
-        if isinstance(arr_release_groups, str):
+        # If the release group is a string or a None, list it here
+        if isinstance(arr_release_groups, str) or arr_release_groups is None:
             arr_release_groups = [arr_release_groups]
 
-        # If we have overlaps, get a note of them here
-        all_seadex_rgs_per_episode = {}
+        # If we have overlaps, get a note of them here. Also
+        # set up an empty list for ones where we might not
+        # have managed to parse
+        all_seadex_rgs_per_episode = {"all": []}
+
+        # And also just check if any release group matches
+        # any Arr release tag
+        overlapping_results = False
+        intersect = list(
+            filter(
+                lambda x: x in list(seadex_dict.keys()),
+                arr_release_groups,
+            )
+        )
+        if len(intersect) > 0:
+            overlapping_results = True
+
         if len(seadex_dict) > 1:
             for seadex_rg, seadex_rg_item in seadex_dict.items():
                 seadex_urls = seadex_rg_item.get("urls", {})
                 for url, url_item in seadex_urls.items():
 
                     seadex_episodes = url_item.get("episodes", [])
+
+                    # If we haven't managed to parse, then set this up as an
+                    # "all" episodes fallback
+                    if len(seadex_episodes) == 0:
+                        if seadex_rg not in all_seadex_rgs_per_episode.get(
+                            seadex_rg, []
+                        ):
+                            all_seadex_rgs_per_episode["all"].append(seadex_rg)
 
                     found_episodes = [False] * len(seadex_episodes)
 
@@ -655,12 +678,12 @@ class SeaDexArr:
                 # Simple case, we have no episode mappings so
                 # just fall back to checking against release group
                 if len(seadex_episodes) == 0:
-                    if seadex_rg not in arr_release_groups:
+                    if seadex_rg not in arr_release_groups and not overlapping_results:
 
                         self.logger.debug(
                             left_aligned_string(
                                 f"SeaDex release group {seadex_rg} not in {arr.capitalize()} release(s): "
-                                f"{','.join(arr_release_groups)}. "
+                                f"{','.join([str(x) for x in arr_release_groups])}. "
                                 f"Will add {url} to downloads",
                                 total_length=self.log_line_length,
                             )
@@ -707,7 +730,11 @@ class SeaDexArr:
 
                                 # If not, flag as should be downloaded if it's not already
                                 # in some overlapping release
-                                if sonarr_rg != seadex_rg:
+                                if (
+                                    sonarr_rg != seadex_rg
+                                    and sonarr_rg
+                                    not in all_seadex_rgs_per_episode["all"]
+                                ):
 
                                     # This check here is to make sure we don't duplicate
                                     # if there's overlap
@@ -721,7 +748,8 @@ class SeaDexArr:
                                             left_aligned_string(
                                                 f"SeaDex release group {seadex_rg} not the same as "
                                                 f"{arr.capitalize()} release for "
-                                                f"{season_ep_str } {sonarr_rg}. "
+                                                f"{season_ep_str} {sonarr_rg}, "
+                                                f"and does not match any other suitable releases. "
                                                 f"Will add {url} to downloads",
                                                 total_length=self.log_line_length,
                                             )
@@ -733,8 +761,8 @@ class SeaDexArr:
 
                                     self.logger.debug(
                                         left_aligned_string(
-                                            f"SeaDex release group {seadex_rg} matches {arr.capitalize()} "
-                                            f"release for {season_ep_str }.",
+                                            f"Found SeaDex match to {arr.capitalize()} "
+                                            f"for {season_ep_str}.",
                                             total_length=self.log_line_length,
                                         )
                                     )
