@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 from datetime import datetime
+from hashlib import md5
 from urllib.request import urlretrieve
 from xml.etree import ElementTree
 
@@ -12,6 +13,7 @@ import yaml
 from ruamel.yaml import YAML
 from seadex import SeaDexEntry, EntryNotFoundError
 
+from .. import __version__
 from .anilist import get_anilist_title, get_anilist_thumb
 from .log import setup_logger, centred_string, left_aligned_string
 from .torrent import (
@@ -19,6 +21,38 @@ from .torrent import (
     get_animetosho_url,
     get_rutracker_url,
 )
+
+
+def save_json(
+    data,
+    out_file,
+    sort_key=None,
+):
+    """Save json in a pretty way
+
+    Args:
+        data (dict): Data to be saved
+        out_file (str): Path to JSON file
+        sort_key (str): Key within each dictionary entry to
+            sort by. Default is None, which will not sort.
+    """
+
+    # Optionally sort this by name
+    if sort_key is not None:
+        keys = list(data[sort_key].keys())
+        keys.sort()
+
+        sorted_data = {key: data[sort_key][key] for key in keys}
+        data[sort_key] = sorted_data
+
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=4,
+        )
+
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
@@ -45,6 +79,8 @@ PRIVATE_TRACKERS = [
     # "Aither",
 ]
 
+UPDATED_AT_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 
 class SeaDexArr:
 
@@ -52,6 +88,7 @@ class SeaDexArr:
         self,
         arr="sonarr",
         config="config.yml",
+        cache="cache.json",
         logger=None,
     ):
         """Base class for SeaDexArr instances
@@ -61,6 +98,8 @@ class SeaDexArr:
                 Defaults to "sonarr".
             config (str, optional): Path to config file.
                 Defaults to "config.yml".
+            cache (str, optional): Path to cache file.
+                Defaults to "cache.json".
             logger. Logging instance. Defaults to None,
                 which will create one.
         """
@@ -75,6 +114,7 @@ class SeaDexArr:
             shutil.copy(config_template_path, config)
             raise FileNotFoundError(f"{config} not found. Copying template")
 
+        self.config_file = config
         with open(config, "r") as f:
             self.config = yaml.safe_load(f)
 
@@ -159,6 +199,21 @@ class SeaDexArr:
         # Set up cache for AL API calls
         self.al_cache = {}
 
+        # Load in cache, if it exists. Else create
+        self.cache_file = cache
+        if os.path.exists(cache):
+            with open(cache, "r") as f:
+                cache = json.load(f)
+        else:
+            cache = self.setup_cache()
+        self.cache = cache
+
+        # Check the package or config hasn't updated, else reset
+        # the cache
+        cache_updated = self.check_cache_updates()
+        if cache_updated:
+            self.cache = self.setup_cache()
+
         self.log_line_sep = "="
         self.log_line_length = 80
 
@@ -194,6 +249,43 @@ class SeaDexArr:
             # Save out
             with open(config_path, "w+") as f:
                 YAML().dump(self.config, f)
+
+        return True
+
+    def setup_cache(self):
+        """Set up the cache file"""
+
+        cache = {}
+
+        with open(self.config_file, "rb") as f:
+            config_hash = md5(f.read()).hexdigest()
+
+        # Descriptor for the file so we know if things have changed
+        description = {
+            "seadexarr_version": __version__,
+            "config_checksum": config_hash,
+        }
+
+        cache.update({"description": description})
+        cache.update({"anilist_entries": {}})
+
+        return cache
+
+    def check_cache_updates(self):
+        """Check if anything's been updated to reset the cache"""
+
+        # Check if SeaDexArr version has updated
+        if self.cache.get("description", {}).get("version", None) != __version__:
+            return False
+
+        # Check if the config file has changed
+        with open(self.config_file, "rb") as f:
+            config_hash = md5(f.read()).hexdigest()
+            if (
+                self.cache.get("description", {}).get("config_checksum", None)
+                != config_hash
+            ):
+                return False
 
         return True
 
@@ -276,6 +368,30 @@ class SeaDexArr:
             raise Warning("Could not connect to SeaDex. Website may be down")
 
         return sd_entry
+
+    def check_al_id_in_cache(
+        self,
+        arr,
+        al_id,
+        seadex_entry,
+    ):
+        """Check if timestamps in cache match when SeaDex entry was last updated
+
+        Args:
+            arr (str): Arr instance
+            al_id (int): AniList ID
+            seadex_entry: SeaDex entry
+        """
+        sd_time = seadex_entry.updated_at
+        sd_time_str = sd_time.strftime(UPDATED_AT_STR_FORMAT)
+        cache_time = (
+            self.cache.get("anilist_entries", {})
+            .get(arr, {})
+            .get(str(al_id), {})
+            .get("updated_at")
+        )
+
+        return sd_time_str == cache_time
 
     def get_anilist_ids(
         self,
@@ -679,7 +795,6 @@ class SeaDexArr:
                 # just fall back to checking against release group
                 if len(seadex_episodes) == 0:
                     if seadex_rg not in arr_release_groups and not overlapping_results:
-
                         self.logger.debug(
                             left_aligned_string(
                                 f"SeaDex release group {seadex_rg} not in {arr.capitalize()} release(s): "
@@ -743,7 +858,6 @@ class SeaDexArr:
                                     )
 
                                     if sonarr_rg not in all_seadex_rg:
-
                                         self.logger.debug(
                                             left_aligned_string(
                                                 f"SeaDex release group {seadex_rg} not the same as "
@@ -937,6 +1051,32 @@ class SeaDexArr:
             raise Exception("Failed to add torrent")
 
         return "torrent_added"
+
+    def update_cache(
+        self,
+        arr,
+        al_id,
+        updated_at,
+    ):
+        """Update cache with time
+
+        Args:
+            arr (str): Arr instance
+            al_id (int): AniList ID
+            updated_at: SeaDex updated time
+        """
+
+        # Format the updated time as a string
+        updated_at_str = updated_at.strftime(UPDATED_AT_STR_FORMAT)
+
+        # Add to cache and save out
+        if arr not in self.cache["anilist_entries"]:
+            self.cache["anilist_entries"][arr] = {}
+
+        self.cache["anilist_entries"][arr][str(al_id)] = {"updated_at": updated_at_str}
+        save_json(self.cache, self.cache_file)
+
+        return True
 
     def log_arr_start(
         self,

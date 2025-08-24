@@ -1,6 +1,7 @@
 0.7.0 (Unreleased)
 ==================
 
+- Create a cache to avoid checked entries that haven't updated
 - Fix grabbing multiple releases when there's a mismatch in episode parsing
 - Removed trackers that aren't used by SeaDex
 - Add support for RuTracker

@@ -90,6 +90,7 @@ class SeaDexSonarr(SeaDexArr):
     def __init__(
         self,
         config="config.yml",
+        cache="cache.json",
         logger=None,
     ):
         """Sync Sonarr instance with SeaDex
@@ -97,6 +98,8 @@ class SeaDexSonarr(SeaDexArr):
         Args:
             config (str, optional): Path to config file.
                 Defaults to "config.yml".
+            cache (str, optional): Path to cache file.
+                Defaults to "cache.json".
             logger. Logging instance. Defaults to None,
                 which will create one.
         """
@@ -105,6 +108,7 @@ class SeaDexSonarr(SeaDexArr):
             self,
             arr="sonarr",
             config=config,
+            cache=cache,
             logger=logger,
         )
 
@@ -197,6 +201,28 @@ class SeaDexSonarr(SeaDexArr):
                     self.log_no_sd_entry(al_id=al_id)
                     continue
                 sd_url = sd_entry.url
+
+                # Check if we've already got this cached
+                al_id_in_cache = self.check_al_id_in_cache(
+                    arr="sonarr",
+                    al_id=al_id,
+                    seadex_entry=sd_entry,
+                )
+
+                if al_id_in_cache:
+                    self.logger.info(
+                        centred_string(
+                            f"Cache time for AniList ID {al_id} matches SeaDex updated time",
+                            total_length=self.log_line_length,
+                        )
+                    )
+                    self.logger.info(
+                        centred_string(
+                            "-" * self.log_line_length,
+                            total_length=self.log_line_length,
+                        )
+                    )
+                    continue
 
                 # Get the AniList title
                 anilist_title = self.get_anilist_title(
@@ -377,6 +403,13 @@ class SeaDexSonarr(SeaDexArr):
                             total_length=self.log_line_length,
                         )
                     )
+
+                # Update and save out the cache
+                self.update_cache(
+                    arr="sonarr",
+                    al_id=al_id,
+                    updated_at=sd_entry.updated_at,
+                )
 
                 self.logger.info(
                     centred_string(

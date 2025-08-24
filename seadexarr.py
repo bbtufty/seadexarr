@@ -26,6 +26,7 @@ if arr is None:
 # Set up config file location
 config_dir = os.getenv("CONFIG_DIR", os.getcwd())
 config = os.path.join(config_dir, "config.yml")
+cache = os.path.join(config_dir, "cache.json")
 
 if running_schedule:
 
@@ -46,6 +47,7 @@ if running_schedule:
         try:
             sdr = SeaDexRadarr(
                 config=config,
+                cache=cache,
                 logger=logger,
             )
             sdr.run()
@@ -57,6 +59,7 @@ if running_schedule:
         try:
             sds = SeaDexSonarr(
                 config=config,
+                cache=cache,
                 logger=logger,
             )
             sds.run()
