@@ -1,4 +1,4 @@
-0.7.0 (Unreleased)
+0.7.0 (2025-08-24)
 ==================
 
 - Create a cache to avoid checked entries that haven't updated
@@ -6,7 +6,7 @@
 - Removed trackers that aren't used by SeaDex
 - Add support for RuTracker
 
-0.6.0 (2025-0813)
+0.6.0 (2025-08-13)
 ==================
 
 - Take Ja-only releases if ``prefer_dual_audio`` is False
