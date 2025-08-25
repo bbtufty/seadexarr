@@ -130,9 +130,15 @@ description of each is given below.
   - Public trackers
     - Nyaa (supported)
     - AnimeTosho (supported)
+    - AniDex
     - RuTracker (supported)
   - Private trackers
     - AB
+    - BeyondHD
+    - PassThePopcorn
+    - HDBits
+    - Blutopia
+    - Aither
 
 ### Advanced settings
 
