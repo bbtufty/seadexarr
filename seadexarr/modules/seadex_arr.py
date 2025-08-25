@@ -65,18 +65,18 @@ ALLOWED_ARRS = [
 PUBLIC_TRACKERS = [
     "Nyaa",
     "AnimeTosho",
-    # "AniDex",
+    "AniDex",
     "RuTracker",
 ]
 
 PRIVATE_TRACKERS = [
     "AB",
-    # "BeyondHD",
-    # "PassThePopcorn",
-    # "BroadcastTheNet",
-    # "HDBits",
-    # "Blutopia",
-    # "Aither",
+    "BeyondHD",
+    "PassThePopcorn",
+    "BroadcastTheNet",
+    "HDBits",
+    "Blutopia",
+    "Aither",
 ]
 
 UPDATED_AT_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
