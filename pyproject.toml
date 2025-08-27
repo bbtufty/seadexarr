@@ -39,8 +39,8 @@ dependencies = [
     "pynyaa == 2.0.0",
     "PyYAML == 6.0.2",
     "qbittorrent-api == 2025.7.0",
-    "requests == 2.32.4",
-    "ruamel.yaml == 0.18.14",
+    "requests == 2.32.5",
+    "ruamel.yaml == 0.18.15",
     "seadex == 0.7.2",
 ]
 
@@ -59,7 +59,7 @@ docs = [
 requires = [
     "setuptools == 80.9.0",
     "wheel == 0.45.1",
-    "setuptools_scm == 9.0.0",
+    "setuptools_scm == 9.2.0",
 ]
 
 build-backend = "setuptools.build_meta"
