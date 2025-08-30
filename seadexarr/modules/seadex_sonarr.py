@@ -405,10 +405,15 @@ class SeaDexSonarr(SeaDexArr):
                     )
 
                 # Update and save out the cache
+                cache_details = {
+                    "name": anilist_title,
+                    "updated_at": sd_entry.updated_at,
+                }
+
                 self.update_cache(
                     arr="sonarr",
                     al_id=al_id,
-                    updated_at=sd_entry.updated_at,
+                    cache_details=cache_details,
                 )
 
                 self.logger.info(

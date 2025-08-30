@@ -1,6 +1,8 @@
 0.8.0 (Unreleased)
 ==================
 
+- Include AniList name in cache
+- Sort cache by AniList ID
 - Revert removing trackers
 
 0.7.0 (2025-08-24)
