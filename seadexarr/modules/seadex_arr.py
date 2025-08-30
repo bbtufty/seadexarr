@@ -26,24 +26,26 @@ from .torrent import (
 def save_json(
     data,
     out_file,
-    sort_key=None,
+    sort_cache=False,
 ):
     """Save json in a pretty way
 
     Args:
         data (dict): Data to be saved
         out_file (str): Path to JSON file
-        sort_key (str): Key within each dictionary entry to
-            sort by. Default is None, which will not sort.
+        sort_cache (bool, optional): Whether to sort cache files by AniList ID. Defaults to False.
     """
 
-    # Optionally sort this by name
-    if sort_key is not None:
-        keys = list(data[sort_key].keys())
-        keys.sort()
+    # Optionally sort this data
+    if sort_cache:
 
-        sorted_data = {key: data[sort_key][key] for key in keys}
-        data[sort_key] = sorted_data
+        for arr, arr_item in data["anilist_entries"].items():
+
+            keys = list(arr_item.keys())
+            keys.sort(key=int)
+            sorted_data = {key: arr_item[key] for key in keys}
+
+            data["anilist_entries"][arr] = sorted_data
 
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(
@@ -1052,29 +1054,35 @@ class SeaDexArr:
 
         return "torrent_added"
 
-    def update_cache(
-        self,
-        arr,
-        al_id,
-        updated_at,
-    ):
-        """Update cache with time
+    def update_cache(self, arr, al_id, cache_details=None):
+        """Update cache with useful info
 
         Args:
             arr (str): Arr instance
             al_id (int): AniList ID
-            updated_at: SeaDex updated time
+            cache_details (dict): Details for the cache entry.
+                Defaults to None
         """
 
-        # Format the updated time as a string
-        updated_at_str = updated_at.strftime(UPDATED_AT_STR_FORMAT)
+        if cache_details is None:
+            cache_details = {}
+
+        # Turn datetime to string
+        if "updated_at" in cache_details:
+            cache_details["updated_at"] = cache_details["updated_at"].strftime(
+                UPDATED_AT_STR_FORMAT
+            )
 
         # Add to cache and save out
         if arr not in self.cache["anilist_entries"]:
             self.cache["anilist_entries"][arr] = {}
 
-        self.cache["anilist_entries"][arr][str(al_id)] = {"updated_at": updated_at_str}
-        save_json(self.cache, self.cache_file)
+        self.cache["anilist_entries"][arr][str(al_id)].update(cache_details)
+        save_json(
+            self.cache,
+            self.cache_file,
+            sort_cache=True,
+        )
 
         return True
 
