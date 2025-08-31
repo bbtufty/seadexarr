@@ -1077,6 +1077,9 @@ class SeaDexArr:
         if arr not in self.cache["anilist_entries"]:
             self.cache["anilist_entries"][arr] = {}
 
+        if str(al_id) not in self.cache["anilist_entries"][arr]:
+            self.cache["anilist_entries"][arr][str(al_id)] = {}
+
         self.cache["anilist_entries"][arr][str(al_id)].update(cache_details)
         save_json(
             self.cache,
