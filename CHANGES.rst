@@ -1,6 +1,7 @@
 0.8.0 (Unreleased)
 ==================
 
+- Fix crash if AniList ID isn't already in cache
 - Include AniList name in cache
 - Sort cache by AniList ID
 - Revert removing trackers
