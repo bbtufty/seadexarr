@@ -86,6 +86,7 @@ else:
             if arr == "radarr":
                 sdr = SeaDexRadarr(
                     config=config,
+                    cache=cache,
                     logger=logger,
                 )
                 sdr.run()
@@ -93,6 +94,7 @@ else:
             elif arr == "sonarr":
                 sds = SeaDexSonarr(
                     config=config,
+                    cache=cache,
                     logger=logger,
                 )
                 sds.run()

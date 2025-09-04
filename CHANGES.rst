@@ -1,6 +1,7 @@
 0.8.0 (Unreleased)
 ==================
 
+- Ensure docker-compose run also uses cache
 - Fix crash if AniList ID isn't already in cache
 - Include AniList name in cache
 - Sort cache by AniList ID
