@@ -224,6 +224,29 @@ class SeaDexSonarr(SeaDexArr):
                     )
                     continue
 
+                # Also check if it's in the Radarr cache, if we have that option
+                if self.ignore_movies_in_radarr:
+                    al_id_in_radarr_cache = self.check_al_id_in_cache(
+                        arr="radarr",
+                        al_id=al_id,
+                        seadex_entry=sd_entry,
+                    )
+                    if al_id_in_radarr_cache:
+                        self.logger.info(
+                            centred_string(
+                                f"Found AniList ID {al_id} in Radarr cache, "
+                                f"and cache time matches SeaDex updated time",
+                                total_length=self.log_line_length,
+                            )
+                        )
+                        self.logger.info(
+                            centred_string(
+                                "-" * self.log_line_length,
+                                total_length=self.log_line_length,
+                            )
+                        )
+                        continue
+
                 # Get the AniList title
                 anilist_title = self.get_anilist_title(
                     al_id=al_id,

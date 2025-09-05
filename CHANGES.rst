@@ -1,6 +1,7 @@
 0.8.0 (Unreleased)
 ==================
 
+- If we're ignoring Radarr movies in Sonarr, also check the cache
 - Do a more proper check for episodes in Sonarr
 - Ensure docker-compose run also uses cache
 - Fix crash if AniList ID isn't already in cache
