@@ -51,7 +51,6 @@ def save_json(
         json.dump(
             data,
             f,
-            ensure_ascii=False,
             indent=4,
         )
 
