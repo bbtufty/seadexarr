@@ -140,6 +140,12 @@ class SeaDexRadarr(SeaDexArr):
                     sd_entry=sd_entry,
                 )
 
+                # Get info for cache
+                cache_details = {
+                    "name": anilist_title,
+                    "updated_at": sd_entry.updated_at,
+                }
+
                 radarr_release_dict = self.get_radarr_release_dict(
                     radarr_movie_id=radarr_movie_id
                 )
@@ -157,6 +163,13 @@ class SeaDexRadarr(SeaDexArr):
 
                 if len(seadex_dict) == 0:
                     self.log_no_seadex_releases()
+
+                    self.update_cache(
+                        arr="radarr",
+                        al_id=al_id,
+                        cache_details=cache_details,
+                    )
+
                     time.sleep(self.sleep_time)
                     continue
 
@@ -239,11 +252,6 @@ class SeaDexRadarr(SeaDexArr):
                     )
 
                 # Update and save out the cache
-                cache_details = {
-                    "name": anilist_title,
-                    "updated_at": sd_entry.updated_at,
-                }
-
                 self.update_cache(
                     arr="radarr",
                     al_id=al_id,
