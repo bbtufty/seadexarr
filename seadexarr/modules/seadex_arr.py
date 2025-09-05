@@ -276,8 +276,8 @@ class SeaDexArr:
         """Check if anything's been updated to reset the cache"""
 
         # Check if SeaDexArr version has updated
-        if self.cache.get("description", {}).get("version", None) != __version__:
-            return False
+        if self.cache.get("description", {}).get("seadexarr_version", None) != __version__:
+            return True
 
         # Check if the config file has changed
         with open(self.config_file, "rb") as f:
@@ -286,9 +286,9 @@ class SeaDexArr:
                 self.cache.get("description", {}).get("config_checksum", None)
                 != config_hash
             ):
-                return False
+                return True
 
-        return True
+        return False
 
     def get_anime_mappings(self):
         """Get the anime IDs file"""
