@@ -14,6 +14,8 @@ For Sonarr, it works by scanning through series, matching these up via the TVDB 
 mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
 (https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database. It then
 attempts to match these releases to specific episodes, to make the comparison as granular and accurate as possible.
+SeaDexArr also checks against filesizes, to attempt to catch when release groups put out updated releases, or those
+at higher quality
 
 For Radarr, this works much the same but instead using the TMDB and IMDb IDs.
 

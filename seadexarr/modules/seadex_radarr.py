@@ -140,13 +140,14 @@ class SeaDexRadarr(SeaDexArr):
                     sd_entry=sd_entry,
                 )
 
-                radarr_release_group = self.get_radarr_release_group(
+                radarr_release_dict = self.get_radarr_release_dict(
                     radarr_movie_id=radarr_movie_id
                 )
+                radarr_release_group = list(radarr_release_dict.keys())[0]
 
                 self.logger.debug(
                     centred_string(
-                        f"Radarr: {radarr_release_group}",
+                        f"Radarr release group: {radarr_release_group}",
                         total_length=self.log_line_length,
                     )
                 )
@@ -176,7 +177,7 @@ class SeaDexRadarr(SeaDexArr):
                 seadex_dict = self.filter_seadex_downloads(
                     seadex_dict=seadex_dict,
                     arr="radarr",
-                    arr_release_groups=radarr_release_group,
+                    arr_release_dict=radarr_release_dict,
                 )
 
                 # Check the release groups are matching, and get a bespoke list of torrents
@@ -325,11 +326,11 @@ class SeaDexRadarr(SeaDexArr):
 
         return movie
 
-    def get_radarr_release_group(
+    def get_radarr_release_dict(
         self,
         radarr_movie_id,
     ):
-        """Get the release group for a Radarr movie
+        """Get a dictionary of useful info for a Radarr movie
 
         Args:
             radarr_movie_id (int): ID for movie in Radarr
@@ -343,18 +344,17 @@ class SeaDexRadarr(SeaDexArr):
         )
         mov_req = requests.get(mov_req_url)
 
-        radarr_release_group = [r.get("releaseGroup", None) for r in mov_req.json()]
+        radarr_release_dict = {
+            r.get("releaseGroup", None): {"size": r.get("size", None)}
+            for r in mov_req.json()
+        }
 
         # If we have multiple options, throw up an error
-        if len(radarr_release_group) > 1:
+        if len(radarr_release_dict) > 1:
             raise ValueError(f"Multiple files found for movie {radarr_movie_id}")
 
         # If we have nothing, return None
-        elif len(radarr_release_group) == 0:
-            radarr_release_group = None
+        elif len(radarr_release_dict) == 0:
+            radarr_release_dict = {None: {"size": None}}
 
-        # Otherwise, take the release group
-        else:
-            radarr_release_group = radarr_release_group[0]
-
-        return radarr_release_group
+        return radarr_release_dict

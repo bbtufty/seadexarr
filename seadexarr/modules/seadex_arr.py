@@ -4,6 +4,7 @@ import os
 import shutil
 from datetime import datetime
 from hashlib import md5
+from itertools import compress
 from urllib.request import urlretrieve
 from xml.etree import ElementTree
 
@@ -81,6 +82,62 @@ PRIVATE_TRACKERS = [
 ]
 
 UPDATED_AT_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def get_all_seadex_rgs_per_episode(
+    seadex_dict,
+    ep_list,
+):
+    """Get a list of all SeaDex releases per-episode
+
+    Args:
+        seadex_dict: Dictionary of SeaDex releases
+        ep_list (list): List of episodes and info
+    """
+
+    all_seadex_rgs_per_episode = {"all": []}
+
+    if len(seadex_dict) > 1:
+        for seadex_rg, seadex_rg_item in seadex_dict.items():
+            seadex_urls = seadex_rg_item.get("urls", {})
+            for url, url_item in seadex_urls.items():
+
+                seadex_episodes = url_item.get("episodes", [])
+
+                # If we haven't managed to parse, then set this up as an
+                # "all" episodes fallback
+                if len(seadex_episodes) == 0:
+                    if seadex_rg not in all_seadex_rgs_per_episode.get(seadex_rg, []):
+                        all_seadex_rgs_per_episode["all"].append(seadex_rg)
+
+                found_episodes = [False] * len(seadex_episodes)
+
+                for seadex_idx, seadex_ep in enumerate(seadex_episodes):
+
+                    if found_episodes[seadex_idx]:
+                        continue
+
+                    for sonarr_ep in ep_list:
+                        sonarr_ep_season = sonarr_ep.get("seasonNumber", 999)
+                        sonarr_ep_episode = sonarr_ep.get("episodeNumber", 999)
+
+                        # Do we have a match?
+                        if sonarr_ep_season == seadex_ep.get(
+                            "season", 888
+                        ) and sonarr_ep_episode == seadex_ep.get("episode", 888):
+
+                            season_key = (
+                                f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
+                            )
+                            if season_key not in all_seadex_rgs_per_episode:
+                                all_seadex_rgs_per_episode[season_key] = []
+
+                            if seadex_rg not in all_seadex_rgs_per_episode[season_key]:
+                                all_seadex_rgs_per_episode[season_key].append(seadex_rg)
+
+                            found_episodes[seadex_idx] = True
+
+    return all_seadex_rgs_per_episode
 
 
 class SeaDexArr:
@@ -276,7 +333,10 @@ class SeaDexArr:
         """Check if anything's been updated to reset the cache"""
 
         # Check if SeaDexArr version has updated
-        if self.cache.get("description", {}).get("seadexarr_version", None) != __version__:
+        if (
+            self.cache.get("description", {}).get("seadexarr_version", None)
+            != __version__
+        ):
             return True
 
         # Check if the config file has changed
@@ -542,6 +602,7 @@ class SeaDexArr:
             seadex_release_groups[t.release_group]["urls"][t.url] = {
                 "url": t.url,
                 "files": [f.name for f in t.files],
+                "size": [f.size for f in t.files],
                 "tracker": t.tracker,
                 "hash": t.infohash,
                 "download": False,
@@ -706,7 +767,7 @@ class SeaDexArr:
         self,
         seadex_dict,
         arr,
-        arr_release_groups,
+        arr_release_dict,
         ep_list=None,
     ):
         """Flip the switch on whether we're downloading this torrent or not
@@ -714,18 +775,12 @@ class SeaDexArr:
         Args:
             seadex_dict: Dictionary of SeaDex releases
             arr: Type of arr instance
-            arr_release_groups: List of arr release groups
+            arr_release_dict: Dictionary of arr release properties
             ep_list: List of episodes. Defaults to None
         """
 
-        # If the release group is a string or a None, list it here
-        if isinstance(arr_release_groups, str) or arr_release_groups is None:
-            arr_release_groups = [arr_release_groups]
-
-        # If we have overlaps, get a note of them here. Also
-        # set up an empty list for ones where we might not
-        # have managed to parse
-        all_seadex_rgs_per_episode = {"all": []}
+        # Get a simple list of the release groups
+        arr_release_groups = list(arr_release_dict.keys())
 
         # And also just check if any release group matches
         # any Arr release tag
@@ -739,54 +794,21 @@ class SeaDexArr:
         if len(intersect) > 0:
             overlapping_results = True
 
-        if len(seadex_dict) > 1:
-            for seadex_rg, seadex_rg_item in seadex_dict.items():
-                seadex_urls = seadex_rg_item.get("urls", {})
-                for url, url_item in seadex_urls.items():
-
-                    seadex_episodes = url_item.get("episodes", [])
-
-                    # If we haven't managed to parse, then set this up as an
-                    # "all" episodes fallback
-                    if len(seadex_episodes) == 0:
-                        if seadex_rg not in all_seadex_rgs_per_episode.get(
-                            seadex_rg, []
-                        ):
-                            all_seadex_rgs_per_episode["all"].append(seadex_rg)
-
-                    found_episodes = [False] * len(seadex_episodes)
-
-                    for seadex_idx, seadex_ep in enumerate(seadex_episodes):
-
-                        if found_episodes[seadex_idx]:
-                            continue
-
-                        for sonarr_ep in ep_list:
-                            sonarr_ep_season = sonarr_ep.get("seasonNumber", 999)
-                            sonarr_ep_episode = sonarr_ep.get("episodeNumber", 999)
-
-                            # Do we have a match?
-                            if sonarr_ep_season == seadex_ep.get(
-                                "season", 888
-                            ) and sonarr_ep_episode == seadex_ep.get("episode", 888):
-
-                                season_key = (
-                                    f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
-                                )
-                                if season_key not in all_seadex_rgs_per_episode:
-                                    all_seadex_rgs_per_episode[season_key] = []
-
-                                if (
-                                    seadex_rg
-                                    not in all_seadex_rgs_per_episode[season_key]
-                                ):
-                                    all_seadex_rgs_per_episode[season_key].append(
-                                        seadex_rg
-                                    )
-
-                                found_episodes[seadex_idx] = True
+        # If we have overlaps, get a note of them here
+        all_seadex_rgs_per_episode = get_all_seadex_rgs_per_episode(
+            seadex_dict=seadex_dict,
+            ep_list=ep_list,
+        )
 
         for seadex_rg, seadex_rg_item in seadex_dict.items():
+
+            self.logger.debug(
+                left_aligned_string(
+                    f"Filtering for release group {seadex_rg}",
+                    total_length=self.log_line_length,
+                )
+            )
+
             seadex_urls = seadex_rg_item.get("urls", {})
             for url, url_item in seadex_urls.items():
 
@@ -807,6 +829,45 @@ class SeaDexArr:
 
                         url_item.update({"download": True})
 
+                    # Else, if we match then double-check against the size
+                    if seadex_rg in arr_release_groups:
+
+                        # Be a blunt hammer and just check intersections
+                        seadex_file_sizes = url_item.get("size", [])
+                        arr_file_sizes = arr_release_dict[seadex_rg].get("size", [])
+
+                        if not isinstance(arr_file_sizes, list):
+                            arr_file_sizes = [arr_file_sizes]
+
+                        intersect = list(
+                            filter(
+                                lambda x: x in seadex_file_sizes,
+                                arr_file_sizes,
+                            )
+                        )
+
+                        # If we have no overlaps at all, then add
+                        if len(intersect) == 0:
+                            self.logger.info(
+                                left_aligned_string(
+                                    f"SeaDex release group {seadex_rg} in {arr.capitalize()} release(s): "
+                                    f"{','.join([str(x) for x in arr_release_groups])}, but filesizes do not match. "
+                                    f"Will add {url} to downloads",
+                                    total_length=self.log_line_length,
+                                )
+                            )
+
+                            url_item.update({"download": True})
+
+                        else:
+                            self.logger.debug(
+                                left_aligned_string(
+                                    f"SeaDex release group {seadex_rg} in {arr.capitalize()} release(s): "
+                                    f"{','.join([str(x) for x in arr_release_groups])}, and filesizes match. ",
+                                    total_length=self.log_line_length,
+                                )
+                            )
+
                 else:
 
                     # At this point, we need an episode list from Sonarr
@@ -815,10 +876,14 @@ class SeaDexArr:
                             "If checking against individual episodes, you need to pass the Sonarr ep_list"
                         )
 
-                    # For each episode we've parsed from the torrent, check if a) it exists in the Sonarr list, and
-                    # if so, b) if the release group matches. If there's any mismatch at all, flip the switch to True
+                    # For each episode we've parsed from the torrent, check if a) it exists in the Sonarr list, b) if
+                    # the release group matches, and c) if the filesizes match. If there's any mismatch between release
+                    # groups (and there's no alternatives), then flip download to True. If all the sizes mismatch,
+                    # flip download to true
 
                     found_episodes = [False] * len(seadex_episodes)
+                    rg_matches = [False] * len(seadex_episodes)
+                    size_matches = [False] * len(seadex_episodes)
 
                     for seadex_idx, seadex_ep in enumerate(seadex_episodes):
 
@@ -827,13 +892,25 @@ class SeaDexArr:
 
                         for sonarr_ep in ep_list:
 
+                            # Get Season, Episode, and size numbers for Sonarr and SeaDex
                             sonarr_ep_season = sonarr_ep.get("seasonNumber", 999)
                             sonarr_ep_episode = sonarr_ep.get("episodeNumber", 999)
+                            sonarr_ep_size = sonarr_ep.get("episodeFile", {}).get(
+                                "size", None
+                            )
+
+                            seadex_ep_season = seadex_ep.get("season", 888)
+                            seadex_ep_episode = seadex_ep.get("episode", 888)
+                            seadex_ep_size = seadex_ep.get("size", None)
 
                             # Do we have a match?
-                            if sonarr_ep_season == seadex_ep.get(
-                                "season", 888
-                            ) and sonarr_ep_episode == seadex_ep.get("episode", 888):
+                            if (
+                                sonarr_ep_season == seadex_ep_season
+                                and sonarr_ep_episode == seadex_ep_episode
+                            ):
+
+                                # Do the sizes match?
+                                size_match = sonarr_ep_size == seadex_ep_size
 
                                 season_ep_str = (
                                     f"S{sonarr_ep_season:02d}E{sonarr_ep_episode:02d}"
@@ -881,8 +958,42 @@ class SeaDexArr:
                                             total_length=self.log_line_length,
                                         )
                                     )
+                                    if not size_match:
+                                        self.logger.debug(
+                                            left_aligned_string(
+                                                f"-> Sizes are different: "
+                                                f"{sonarr_ep_size} (Sonarr), {seadex_ep_size} (SeaDex)",
+                                                total_length=self.log_line_length,
+                                            )
+                                        )
+                                    else:
+                                        self.logger.debug(
+                                            left_aligned_string(
+                                                f"-> Sizes match: {sonarr_ep_size}",
+                                                total_length=self.log_line_length,
+                                            )
+                                        )
+
+                                    rg_matches[seadex_idx] = True
+
+                                # Now check against file size
+                                if size_match:
+                                    size_matches[seadex_idx] = True
 
                                 found_episodes[seadex_idx] = True
+
+                    # If we have matched the release groups but not the file sizes, then flag that
+                    # here and mark for download
+                    size_matches = list(compress(size_matches, rg_matches))
+                    if not any(size_matches) and len(size_matches) > 0:
+                        self.logger.info(
+                            left_aligned_string(
+                                f"File sizes are all different for release group {seadex_rg}. "
+                                f"Will add {url} to downloads",
+                                total_length=self.log_line_length,
+                            )
+                        )
+                        url_item.update({"download": True})
 
         return seadex_dict
 

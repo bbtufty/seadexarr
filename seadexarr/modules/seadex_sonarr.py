@@ -17,6 +17,16 @@ from .seadex_arr import SeaDexArr
 from .seadex_radarr import SeaDexRadarr
 
 
+TORRENT_FILENAMES_TO_SKIP = [
+    "NCED",
+    "NCOP",
+    "Creditless Ending",
+    "Creditless Opening",
+    "Creditless ED",
+    "Creditless OP",
+]
+
+
 def get_tvdb_id(mapping):
     """Get TVDB ID for a particular mapping
 
@@ -326,11 +336,12 @@ class SeaDexSonarr(SeaDexArr):
                     time.sleep(self.sleep_time)
                     continue
 
-                sonarr_release_groups = self.get_sonarr_release_groups(ep_list=ep_list)
+                sonarr_release_dict = self.get_sonarr_release_dict(ep_list=ep_list)
+                sonarr_release_groups = list(sonarr_release_dict.keys())
 
                 self.logger.debug(
                     centred_string(
-                        f"Sonarr: {', '.join(sonarr_release_groups)}",
+                        f"Sonarr release group(s): {', '.join(sonarr_release_groups)}",
                         total_length=self.log_line_length,
                     )
                 )
@@ -366,7 +377,7 @@ class SeaDexSonarr(SeaDexArr):
                 seadex_dict = self.filter_seadex_downloads(
                     seadex_dict=seadex_dict,
                     arr="sonarr",
-                    arr_release_groups=sonarr_release_groups,
+                    arr_release_dict=sonarr_release_dict,
                     ep_list=ep_list,
                 )
 
@@ -667,15 +678,15 @@ class SeaDexSonarr(SeaDexArr):
                     if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
                 ]
             else:
-                final_ep_list = final_ep_list[ep_offset: n_eps + ep_offset]
+                final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
 
         return final_ep_list
 
-    def get_sonarr_release_groups(
+    def get_sonarr_release_dict(
         self,
         ep_list,
     ):
-        """Get a unique list of release groups for a series in Sonarr
+        """Get a dictionary of useful info for a series in Sonarr
 
         Args:
             ep_list (list): List of episodes
@@ -683,7 +694,7 @@ class SeaDexSonarr(SeaDexArr):
 
         # Look through, get release groups from the existing Sonarr files
         # and note any potential missing files
-        sonarr_release_groups = []
+        sonarr_release_dict = {}
         missing_eps = 0
         n_eps = len(ep_list)
         for ep in ep_list:
@@ -697,8 +708,10 @@ class SeaDexSonarr(SeaDexArr):
             if release_group is None or release_group == "":
                 continue
 
-            if release_group not in sonarr_release_groups:
-                sonarr_release_groups.append(release_group)
+            if release_group not in sonarr_release_dict:
+                sonarr_release_dict[release_group] = {"size": []}
+            size = ep.get("episodeFile", {}).get("size", None)
+            sonarr_release_dict[release_group]["size"].append(size)
 
         if missing_eps > 0:
             self.logger.info(
@@ -708,9 +721,7 @@ class SeaDexSonarr(SeaDexArr):
                 )
             )
 
-        sonarr_release_groups.sort()
-
-        return sonarr_release_groups
+        return sonarr_release_dict
 
     def parse_episodes_from_seadex(
         self,
@@ -734,12 +745,17 @@ class SeaDexSonarr(SeaDexArr):
 
                 # Set up a list to parse episodes from files
                 url_item.update({"episodes": []})
+                sizes = url_item.get("size", [])
 
-                for seadex_file in url_item.get("files", []):
+                for sd_file_idx, seadex_file in enumerate(url_item.get("files", [])):
 
                     # Get basename from the file, and encode it through for the API
                     # query
                     f = os.path.basename(seadex_file)
+
+                    # Skip filenames with things like "NCED", "NCOP"
+                    if any([x in f for x in TORRENT_FILENAMES_TO_SKIP]):
+                        continue
 
                     d = {"title": f, "apikey": self.sonarr_api_key}
                     d_enc = urlencode(d)
@@ -764,6 +780,7 @@ class SeaDexSonarr(SeaDexArr):
 
                         season = ep.get("seasonNumber", None)
                         episode = ep.get("episodeNumber", None)
+                        size = sizes[sd_file_idx]
 
                         if season is None or episode is None:
                             raise ValueError("Season or episode has come up None")
@@ -775,10 +792,18 @@ class SeaDexSonarr(SeaDexArr):
                         )
 
                         url_item["episodes"].append(
-                            {"season": season, "episode": episode}
+                            {
+                                "season": season,
+                                "episode": episode,
+                                "size": size,
+                            }
                         )
                         release_group_item["all_episodes"].append(
-                            {"season": season, "episode": episode}
+                            {
+                                "season": season,
+                                "episode": episode,
+                                "size": size,
+                            }
                         )
 
         return seadex_dict

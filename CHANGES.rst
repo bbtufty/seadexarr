@@ -1,3 +1,8 @@
+0.9.0 (Unreleased)
+==================
+
+- Check file sizes, for different versions of releases etc.
+
 0.8.1 (2025-09-05)
 ==================
 
