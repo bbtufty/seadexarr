@@ -1,4 +1,4 @@
-0.8.0 (Unreleased)
+0.8.0 (2025-09-05)
 ==================
 
 - If we're ignoring Radarr movies in Sonarr, also check the cache
