@@ -263,6 +263,12 @@ class SeaDexSonarr(SeaDexArr):
                     sd_entry=sd_entry,
                 )
 
+                # Get info for cache
+                cache_details = {
+                    "name": anilist_title,
+                    "updated_at": sd_entry.updated_at,
+                }
+
                 # If we have a Radarr instance, and we don't want to add movies that
                 # are already in Radarr, do that now
                 if (
@@ -351,6 +357,13 @@ class SeaDexSonarr(SeaDexArr):
 
                 if len(seadex_dict) == 0:
                     self.log_no_seadex_releases()
+
+                    self.update_cache(
+                        arr="sonarr",
+                        al_id=al_id,
+                        cache_details=cache_details,
+                    )
+
                     time.sleep(self.sleep_time)
                     continue
 
@@ -439,11 +452,6 @@ class SeaDexSonarr(SeaDexArr):
                     )
 
                 # Update and save out the cache
-                cache_details = {
-                    "name": anilist_title,
-                    "updated_at": sd_entry.updated_at,
-                }
-
                 self.update_cache(
                     arr="sonarr",
                     al_id=al_id,
