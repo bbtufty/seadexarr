@@ -562,13 +562,6 @@ class SeaDexSonarr(SeaDexArr):
             al_cache=self.al_cache,
         )
 
-        # Slice the list to get the correct episodes, so any potential offsets
-        ep_offset = mapping.get("tvdb_epoffset", 0)
-        n_eps, self.al_cache = get_anilist_n_eps(
-            al_id,
-            al_cache=self.al_cache,
-        )
-
         # Potentially pull out a bunch of mappings from AniDB. These should
         # be for anything not marked as TV, and specials as marked by
         # being in Season 0
@@ -630,11 +623,28 @@ class SeaDexSonarr(SeaDexArr):
             final_ep_list = copy.deepcopy(anidb_final_ep_list)
 
         else:
+
+            # Slice the list to get the correct episodes, so any potential offsets
+            ep_offset = mapping.get("tvdb_epoffset", 0)
+            n_eps, self.al_cache = get_anilist_n_eps(
+                al_id,
+                al_cache=self.al_cache,
+            )
+
             # If we don't get a number of episodes, use them all
             if n_eps is None:
                 n_eps = len(final_ep_list) - ep_offset
 
-            final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
+            # Check that we're including this by the episode number. This only
+            # works for single-seasons, so be careful!
+            if tvdb_season != -1:
+                final_ep_list = [
+                    ep
+                    for ep in final_ep_list
+                    if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
+                ]
+            else:
+                final_ep_list = final_ep_list[ep_offset: n_eps + ep_offset]
 
         return final_ep_list
 
