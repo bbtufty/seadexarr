@@ -19,6 +19,9 @@ qbit_info:
 sonarr_torrent_category:
 radarr_torrent_category:
 
+# Do you want to filter purely by torrent hash?
+use_torrent_hash_to_filter: false
+
 # Maximum number of torrents to add in one run
 max_torrents_to_add:
 

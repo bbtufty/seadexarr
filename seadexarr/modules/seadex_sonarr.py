@@ -263,10 +263,11 @@ class SeaDexSonarr(SeaDexArr):
                     sd_entry=sd_entry,
                 )
 
-                # Get info for cache
+                # Setup info for cache
                 cache_details = {
                     "name": anilist_title,
                     "updated_at": sd_entry.updated_at,
+                    "torrent_hashes": [],
                 }
 
                 # If we have a Radarr instance, and we don't want to add movies that
@@ -387,7 +388,8 @@ class SeaDexSonarr(SeaDexArr):
 
                 # Filter downloads by whether the episodes in each torrent match the release
                 # group we have in Sonarr
-                seadex_dict = self.filter_seadex_downloads(
+                torrent_hashes, seadex_dict = self.filter_seadex_downloads(
+                    al_id=al_id,
                     seadex_dict=seadex_dict,
                     arr="sonarr",
                     arr_release_dict=sonarr_release_dict,
@@ -452,6 +454,7 @@ class SeaDexSonarr(SeaDexArr):
                     )
 
                 # Update and save out the cache
+                cache_details.update({"torrent_hashes": torrent_hashes})
                 self.update_cache(
                     arr="sonarr",
                     al_id=al_id,
