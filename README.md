@@ -51,8 +51,7 @@ services:
 ```
 
 And then to run on a schedule, simply run `docker-compose up -d seadexarr`. If you want to run one Arr one time, you 
-can instead run like `docker-compose run seadexarr --arr radarr` (swap out radarr for sonarr depending on which you
-want to run).
+can instead run like `docker-compose run seadexarr run single --radarr --sonarr`.
 
 SeaDexArr can also be installed via pip:
 
@@ -68,22 +67,33 @@ cd seadexarr
 pip install -e .
 ```
 
-## How SeaDexArr chooses a release
+## CLI
 
-SeaDexArr performs a number of cuts to get to a single best release for you. First, it will filter out all torrents
-coming from trackers that haven't been specified (if you haven't been more granular, this will be all public trackers
-and potentially all private trackers; see ``trackers``). Then, if you only want public torrents (``public_only``), it
-will filter out anything from a private tracker. Next, if you only want to grab releases marked by SeaDex as "best"
-(``want_best``), it will down-select any torrents marked as "best", as long as there's at least one. Finally, if
-you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as there's at least
-one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio torrents (so long
-as there's at least one not tagged as dual-audio). By doing this, SeaDexArr should generally find a single best
-torrent, though if you're in interactive mode (``interactive``) and there are multiple options that match your
-criteria, it will give you an option to select one (or multiple).
+SeaDexArr features a command-line interface, with a number of modules. If running in Docker mode, 
+to run these simply add a ``docker run`` before the command below.
 
-## Usage
+### ``seadexarr run``
 
-To run SeaDexArr, the Python code is simple:
+There are two options here, ``run scheduled`` and ``run single``. Scheduled is the default mode,
+and will run if you just enter ``seadexarr`` into the command line, which will run every few hours
+(default 6) to keep things up to date automatically. Single will just run once and be done. For
+the single run, pass --sonarr or --radarr to run the Sonarr or Radarr modules. Scheduled runs
+automatically for both
+
+### ``seadexarr config``
+
+To generate a blank config file, simply enter ``config init``. You can then populate
+to your liking.
+
+### ```seadexarr cache```
+
+There are a number of cache commands: ``cache backup`` will rename ``cache.json`` to ``cache.backup.json``,
+``cache restore`` will restore this backup, and ``cache remove`` will remove the cache file. This can
+be useful if you've changed the config and want to do a fresh run.
+
+## Scripting
+
+To run SeaDexArr in a Python script, the code is simple:
 
 ```
 from seadexarr import SeaDexSonarr, SeaDexRadarr
@@ -97,6 +107,19 @@ sdr.run()
 
 On the first run, the code will generate a config file in your working directory. This should be populated to your own 
 preference, and then run the code again.
+
+## How SeaDexArr chooses a release
+
+SeaDexArr performs a number of cuts to get to a single best release for you. First, it will filter out all torrents
+coming from trackers that haven't been specified (if you haven't been more granular, this will be all public trackers
+and potentially all private trackers; see ``trackers``). Then, if you only want public torrents (``public_only``), it
+will filter out anything from a private tracker. Next, if you only want to grab releases marked by SeaDex as "best"
+(``want_best``), it will down-select any torrents marked as "best", as long as there's at least one. Finally, if
+you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as there's at least
+one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio torrents (so long
+as there's at least one not tagged as dual-audio). By doing this, SeaDexArr should generally find a single best
+torrent, though if you're in interactive mode (``interactive``) and there are multiple options that match your
+criteria, it will give you an option to select one (or multiple).
 
 ## Config
 

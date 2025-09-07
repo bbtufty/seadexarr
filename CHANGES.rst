@@ -1,6 +1,7 @@
 0.9.0 (Unreleased)
 ==================
 
+- Add a number of useful CLI commands
 - Include option to just check torrents by hash
 - Update cache if no suitable releases found
 - Check file sizes, for different versions of releases etc.
