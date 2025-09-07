@@ -12,16 +12,26 @@ releases tagged on SeaDex. SeaDexArr supports both Sonarr and Radarr.
 
 For Sonarr, it works by scanning through series, matching these up via the TVDB or IMDb IDs to AniList 
 mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
-(https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database. It then
-attempts to match these releases to specific episodes, to make the comparison as granular and accurate as possible.
-SeaDexArr also checks against filesizes, to attempt to catch when release groups put out updated releases, or those
-at higher quality
-
-For Radarr, this works much the same but instead using the TMDB and IMDb IDs.
+(https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database. For Radarr, this 
+works much the same but instead using the TMDB and IMDb IDs. 
 
 SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
 automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
 out there.
+
+There are then two options for how SeaDexArr will filter releases to grab:
+
+Against existing files (default; `use_torrent_hash_to_filter = False`):
+
+SeaDexArr will attempt to match these releases to release groups in Sonarr/Radarr, and for Sonarr will also try to
+parse filenames to check against individual episodes. SeaDexArr also checks against filesizes, to attempt to catch when 
+release groups put out updated releases, or those at higher quality.
+
+Against torrent hashes (`use_torrent_hash_to_filter = True`):
+
+SeaDexArr will match releases to torrent hashes in the cache. This will ensure that if releases get updated then they
+will be grabbed. However, if you already have an existing library then this could result in torrents being downloaded
+again, and will grab multiple overlapping results if you aren't in interactive mode.
 
 ## Installation
 
@@ -144,6 +154,8 @@ description of each is given below.
 
 ### Advanced settings
 
+- `use_torrent_hash_to_filter`: Can either try and filter by release groups in Sonarr/Radarr (False),
+  or by torrent hashes in the cache (True). Defaults to False. See a more detailed description above
 - `sleep_time`: To avoid hitting API rate limits, after each query SeaDexArr will wait a number 
    of seconds. Defaults to 2
 - `cache_time`: The mappings files don't change all the time, so are cached for a certain number

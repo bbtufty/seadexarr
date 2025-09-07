@@ -204,6 +204,10 @@ class SeaDexArr:
 
             self.qbit = qbit
 
+        self.use_torrent_hash_to_filter = self.config.get(
+            f"use_torrent_hash_to_filter", False
+        )
+
         # Hooks between torrents and Arrs, and torrent number bookkeeping
         self.torrent_category = self.config.get(f"{arr}_torrent_category", None)
         self.max_torrents_to_add = self.config.get("max_torrents_to_add", None)
@@ -607,6 +611,7 @@ class SeaDexArr:
                 "hash": t.infohash,
                 "download": False,
             }
+
         return seadex_release_groups
 
     def filter_seadex_interactive(
@@ -765,12 +770,125 @@ class SeaDexArr:
 
     def filter_seadex_downloads(
         self,
+        al_id,
         seadex_dict,
         arr,
         arr_release_dict,
         ep_list=None,
     ):
         """Flip the switch on whether we're downloading this torrent or not
+
+        Args:
+            al_id: AniList ID
+            seadex_dict: Dictionary of SeaDex releases
+            arr: Type of arr instance
+            arr_release_dict: Dictionary of arr release properties
+            ep_list: List of episodes. Defaults to None
+        """
+
+        if self.use_torrent_hash_to_filter:
+            torrent_hashes, seadex_dict = self.filter_by_torrent_hash(
+                al_id=al_id,
+                seadex_dict=seadex_dict,
+                arr=arr,
+            )
+        else:
+            torrent_hashes, seadex_dict = self.filter_by_release_group(
+                seadex_dict=seadex_dict,
+                arr=arr,
+                arr_release_dict=arr_release_dict,
+                ep_list=ep_list,
+            )
+
+            # Also include any cached hashes
+            cached_hashes = (
+                self.cache.get("anilist_entries", {})
+                .get(arr, {})
+                .get(str(al_id), {})
+                .get("torrent_hashes", [])
+            )
+            torrent_hashes.extend(cached_hashes)
+
+        # Make sure the hashes are unique
+        torrent_hashes = list(set(torrent_hashes))
+
+        return torrent_hashes, seadex_dict
+
+    def filter_by_torrent_hash(
+        self,
+        al_id,
+        seadex_dict,
+        arr,
+    ):
+        """Select downloads if torrent hash is not already in cache
+
+        Note that for multiple "best" releases, this means everything will
+        be grabbed
+
+        Args:
+            al_id: AniList ID
+            seadex_dict: Dictionary of SeaDex releases
+            arr: Type of arr instance
+        """
+
+        cached_hashes = (
+            self.cache.get("anilist_entries", {})
+            .get(arr, {})
+            .get(str(al_id), {})
+            .get("torrent_hashes", [])
+        )
+        torrent_hashes = []
+
+        for seadex_rg, seadex_rg_item in seadex_dict.items():
+
+            self.logger.debug(
+                left_aligned_string(
+                    f"Filtering for release group {seadex_rg}",
+                    total_length=self.log_line_length,
+                )
+            )
+
+            seadex_urls = seadex_rg_item.get("urls", {})
+            for url, url_item in seadex_urls.items():
+
+                url_hash = url_item.get("hash", None)
+
+                # If the URL is already in the hash cache, then append but don't set to download
+                torrent_hashes.append(url_hash)
+                if url_hash not in cached_hashes:
+                    self.logger.debug(
+                        left_aligned_string(
+                            f"Torrent hash {url_hash} not found in cache. "
+                            f"Will add to downloads",
+                            total_length=self.log_line_length,
+                        )
+                    )
+
+                    url_item.update({"download": True})
+
+                else:
+                    self.logger.debug(
+                        left_aligned_string(
+                            f"Torrent hash {url_hash} in cache. " f"Will skip download",
+                            total_length=self.log_line_length,
+                        )
+                    )
+
+        return torrent_hashes, seadex_dict
+
+    def filter_by_release_group(
+        self,
+        seadex_dict,
+        arr,
+        arr_release_dict,
+        ep_list=None,
+    ):
+        """Filter torrents by release group
+
+        This is either episode-by-episode for the Sonarr
+        case where we can parse episodes, or a more blunt
+        hammer just checking against anything for Radarr
+        and weirdly named TV
 
         Args:
             seadex_dict: Dictionary of SeaDex releases
@@ -781,6 +899,8 @@ class SeaDexArr:
 
         # Get a simple list of the release groups
         arr_release_groups = list(arr_release_dict.keys())
+
+        torrent_hashes = []
 
         # And also just check if any release group matches
         # any Arr release tag
@@ -812,6 +932,7 @@ class SeaDexArr:
             seadex_urls = seadex_rg_item.get("urls", {})
             for url, url_item in seadex_urls.items():
 
+                url_hash = url_item.get("hash", None)
                 seadex_episodes = url_item.get("episodes", [])
 
                 # Simple case, we have no episode mappings so
@@ -828,6 +949,7 @@ class SeaDexArr:
                         )
 
                         url_item.update({"download": True})
+                        torrent_hashes.append(url_hash)
 
                     # Else, if we match then double-check against the size
                     if seadex_rg in arr_release_groups:
@@ -858,6 +980,7 @@ class SeaDexArr:
                             )
 
                             url_item.update({"download": True})
+                            torrent_hashes.append(url_hash)
 
                         else:
                             self.logger.debug(
@@ -948,6 +1071,7 @@ class SeaDexArr:
                                         )
 
                                         url_item.update({"download": True})
+                                        torrent_hashes.append(url_hash)
 
                                 else:
 
@@ -995,7 +1119,7 @@ class SeaDexArr:
                         )
                         url_item.update({"download": True})
 
-        return seadex_dict
+        return torrent_hashes, seadex_dict
 
     @staticmethod
     def get_any_to_download(seadex_dict):

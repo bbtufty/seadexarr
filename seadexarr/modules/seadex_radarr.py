@@ -140,10 +140,11 @@ class SeaDexRadarr(SeaDexArr):
                     sd_entry=sd_entry,
                 )
 
-                # Get info for cache
+                # Setup info for cache
                 cache_details = {
                     "name": anilist_title,
                     "updated_at": sd_entry.updated_at,
+                    "torrent_hashes": [],
                 }
 
                 radarr_release_dict = self.get_radarr_release_dict(
@@ -187,7 +188,8 @@ class SeaDexRadarr(SeaDexArr):
                         sd_entry=sd_entry,
                     )
 
-                seadex_dict = self.filter_seadex_downloads(
+                torrent_hashes, seadex_dict = self.filter_seadex_downloads(
+                    al_id=al_id,
                     seadex_dict=seadex_dict,
                     arr="radarr",
                     arr_release_dict=radarr_release_dict,
@@ -252,6 +254,7 @@ class SeaDexRadarr(SeaDexArr):
                     )
 
                 # Update and save out the cache
+                cache_details.update({"torrent_hashes": torrent_hashes})
                 self.update_cache(
                     arr="radarr",
                     al_id=al_id,
