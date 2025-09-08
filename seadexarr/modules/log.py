@@ -31,7 +31,8 @@ def setup_logger(
     """
 
     if os.environ.get("DOCKER_ENV"):
-        log_dir = os.path.join("/config", log_dir)
+        config_dir = os.environ.get("CONFIG_DIR")
+        log_dir = os.path.join(config_dir, log_dir)
     else:
         log_dir = os.path.join(os.getcwd(), log_dir)
 
