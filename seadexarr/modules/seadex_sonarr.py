@@ -219,7 +219,7 @@ class SeaDexSonarr(SeaDexArr):
                     seadex_entry=sd_entry,
                 )
 
-                if al_id_in_cache:
+                if al_id_in_cache and not self.ignore_seadex_update_times:
                     self.logger.info(
                         centred_string(
                             f"Cache time for AniList ID {al_id} matches SeaDex updated time",
@@ -235,7 +235,7 @@ class SeaDexSonarr(SeaDexArr):
                     continue
 
                 # Also check if it's in the Radarr cache, if we have that option
-                if self.ignore_movies_in_radarr:
+                if self.ignore_movies_in_radarr and not self.ignore_seadex_update_times:
                     al_id_in_radarr_cache = self.check_al_id_in_cache(
                         arr="radarr",
                         al_id=al_id,

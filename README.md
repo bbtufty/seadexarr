@@ -33,6 +33,13 @@ SeaDexArr will match releases to torrent hashes in the cache. This will ensure t
 will be grabbed. However, if you already have an existing library then this could result in torrents being downloaded
 again, and will grab multiple overlapping results if you aren't in interactive mode.
 
+By default, SeaDexArr will not check a particular release again unless SeaDex has updated recently. You can override
+this behaviour by setting ``ignore_seadex_update_times`` to True in the config (see config section below).
+
+> [!TIP]
+> **If you make changes to your config, you should probably remove your cache. You can do so by CLI,
+> use ``seadexarr cache remove`` (see below for more details).**
+
 ## Installation
 
 SeaDexArr is available as a Docker container. Into a docker-compose file:
@@ -177,6 +184,8 @@ description of each is given below.
 
 ### Advanced settings
 
+- `ignore_seadex_update_times`: If True, will not check against the update times in the cache to
+  decide whether to search for a release. Defaults to False
 - `use_torrent_hash_to_filter`: Can either try and filter by release groups in Sonarr/Radarr (False),
   or by torrent hashes in the cache (True). Defaults to False. See a more detailed description above
 - `sleep_time`: To avoid hitting API rate limits, after each query SeaDexArr will wait a number 

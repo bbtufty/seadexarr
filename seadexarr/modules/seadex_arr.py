@@ -204,8 +204,12 @@ class SeaDexArr:
 
             self.qbit = qbit
 
+        self.ignore_seadex_update_times = self.config.get(
+            "ignore_seadex_update_times", False
+        )
+
         self.use_torrent_hash_to_filter = self.config.get(
-            f"use_torrent_hash_to_filter", False
+            "use_torrent_hash_to_filter", False
         )
 
         # Hooks between torrents and Arrs, and torrent number bookkeeping
@@ -270,11 +274,11 @@ class SeaDexArr:
             cache = self.setup_cache()
         self.cache = cache
 
-        # Check the package or config hasn't updated, else reset
-        # the cache
-        cache_updated = self.check_cache_updates()
-        if cache_updated:
-            self.cache = self.setup_cache()
+        # # Check the package or config hasn't updated, else reset
+        # # the cache
+        # cache_updated = self.check_cache_updates()
+        # if cache_updated:
+        #     self.cache = self.setup_cache()
 
         self.log_line_sep = "="
         self.log_line_length = 80
