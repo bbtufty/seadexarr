@@ -1,6 +1,7 @@
 0.9.0 (Unreleased)
 ==================
 
+- Update cache if version/config changes
 - Add option to ignore SeaDex update time
 - Don't recreate cache on config change
 - Add a number of useful CLI commands
