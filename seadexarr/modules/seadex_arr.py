@@ -274,11 +274,9 @@ class SeaDexArr:
             cache = self.setup_cache()
         self.cache = cache
 
-        # # Check the package or config hasn't updated, else reset
-        # # the cache
-        # cache_updated = self.check_cache_updates()
-        # if cache_updated:
-        #     self.cache = self.setup_cache()
+        # Check the package or config hasn't updated, else
+        # edit the cache description
+        self.check_cache_updates()
 
         self.log_line_sep = "="
         self.log_line_length = 80
@@ -338,14 +336,14 @@ class SeaDexArr:
         return cache
 
     def check_cache_updates(self):
-        """Check if anything's been updated to reset the cache"""
+        """Check if anything's been updated, and if so update in cache"""
 
         # Check if SeaDexArr version has updated
         if (
             self.cache.get("description", {}).get("seadexarr_version", None)
             != __version__
         ):
-            return True
+            self.cache["description"]["seadexarr_version"] = __version__
 
         # Check if the config file has changed
         with open(self.config_file, "rb") as f:
@@ -354,9 +352,9 @@ class SeaDexArr:
                 self.cache.get("description", {}).get("config_checksum", None)
                 != config_hash
             ):
-                return True
+                self.cache["description"]["config_checksum"] = config_hash
 
-        return False
+        return True
 
     def get_anime_mappings(self):
         """Get the anime IDs file"""
