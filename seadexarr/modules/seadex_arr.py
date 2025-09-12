@@ -41,7 +41,6 @@ def save_json(
     if sort_cache:
 
         for arr, arr_item in data["anilist_entries"].items():
-
             keys = list(arr_item.keys())
             keys.sort(key=int)
             sorted_data = {key: arr_item[key] for key in keys}
@@ -58,6 +57,7 @@ def save_json(
 
 ANIME_IDS_URL = "https://raw.githubusercontent.com/Kometa-Team/Anime-IDs/refs/heads/master/anime_ids.json"
 ANIDB_MAPPINGS_URL = "https://raw.githubusercontent.com/Anime-Lists/anime-lists/refs/heads/master/anime-list-master.xml"
+ANIBRIDGE_MAPPINGS_URL = "https://raw.githubusercontent.com/eliasbenb/PlexAniBridge-Mappings/refs/heads/v2/mappings.json"
 
 ALLOWED_ARRS = [
     "radarr",
@@ -243,13 +243,17 @@ class SeaDexArr:
         # Get the mapping files
         anime_mappings = self.config.get("anime_mappings", None)
         anidb_mappings = self.config.get("anidb_mappings", None)
+        anibridge_mappings = self.config.get("anibridge_mappings", None)
 
         if anime_mappings is None:
             anime_mappings = self.get_anime_mappings()
         if anidb_mappings is None:
             anidb_mappings = self.get_anidb_mappings()
+        if anibridge_mappings is None:
+            anibridge_mappings = self.get_anibridge_mappings()
         self.anime_mappings = anime_mappings
         self.anidb_mappings = anidb_mappings
+        self.anibridge_mappings = anibridge_mappings
 
         self.interactive = self.config.get("interactive", False)
 
@@ -387,6 +391,22 @@ class SeaDexArr:
 
         return anidb_mappings
 
+    def get_anibridge_mappings(self):
+        """Get PlexAniBridge mappings file"""
+
+        anibridge_mappings_file = os.path.join("anibridge_mappings.json")
+
+        # If a file doesn't exist, get it
+        self.get_external_mappings(
+            f=anibridge_mappings_file,
+            url=ANIBRIDGE_MAPPINGS_URL,
+        )
+
+        with open(anibridge_mappings_file, "r") as f:
+            anibridge_mappings = json.load(f)
+
+        return anibridge_mappings
+
     def get_external_mappings(
         self,
         f,
@@ -488,42 +508,159 @@ class SeaDexArr:
             )
 
         anilist_mappings = {}
+
+        # Start by looking through our base case, which are the Kometa
+        # Anime IDs. Save these to a dict where the key is the AniList ID
+        anilist_mappings = self.get_mappings_from_anime_mappings(
+            tvdb_id=tvdb_id,
+            tmdb_id=tmdb_id,
+            imdb_id=imdb_id,
+            tmdb_type=tmdb_type,
+            anilist_mappings=anilist_mappings,
+        )
+
+        # Then, look through the AniBridge mappings
+        anilist_mappings = self.get_mappings_from_anibridge_mappings(
+            tvdb_id=tvdb_id,
+            tmdb_id=tmdb_id,
+            imdb_id=imdb_id,
+            tmdb_type=tmdb_type,
+            anilist_mappings=anilist_mappings,
+        )
+
+        # Sort by AniList ID
+        anilist_mappings = dict(sorted(anilist_mappings.items()))
+
+        return anilist_mappings
+
+    def get_mappings_from_anime_mappings(
+        self,
+        tvdb_id=None,
+        tmdb_id=None,
+        imdb_id=None,
+        tmdb_type="movie",
+        anilist_mappings=None,
+    ):
+        """Get mappings from the Anime ID mappings
+
+        Args:
+            tvdb_id (int): TVDB ID
+            tmdb_id (int): TMDB ID
+            imdb_id (int): IMDb ID
+            tmdb_type (str): TMDB type. Can be "movie" or "show"
+            anilist_mappings (dict): Dictionary of AniList mappings.
+                Defaults to None, which will create a new dictionary
+        """
+
+        if anilist_mappings is None:
+            anilist_mappings = {}
+
+        if tmdb_type not in ["movie", "show"]:
+            raise ValueError("tmdb_type must be 'movie' or 'show'")
+
+        # Check we have exactly one ID specified here
+        non_none_sum = sum(v is not None for v in [tvdb_id, tmdb_id, imdb_id])
+
+        if non_none_sum == 0:
+            raise ValueError(
+                "At least one of tvdb_id, tmdb_id, and imdb_id must be provided"
+            )
+
         if tvdb_id is not None:
             anilist_mappings.update(
                 {
-                    n: m
+                    m["anilist_id"]: m
                     for n, m in self.anime_mappings.items()
                     if m.get("tvdb_id", None) == tvdb_id
+                    and m.get("anilist_id", None) is not None
+                    and m.get("anilist_id", None) not in anilist_mappings
                 }
             )
         if tmdb_id is not None:
             anilist_mappings.update(
                 {
-                    n: m
+                    m["anilist_id"]: m
                     for n, m in self.anime_mappings.items()
                     if m.get(f"tmdb_{tmdb_type}_id", None) == tmdb_id
+                    and m.get("anilist_id", None) is not None
+                    and m.get("anilist_id", None) not in anilist_mappings
                 }
             )
         if imdb_id is not None:
             anilist_mappings.update(
                 {
-                    n: m
+                    m["anilist_id"]: m
                     for n, m in self.anime_mappings.items()
                     if m.get("imdb_id", None) == imdb_id
+                    and m.get("anilist_id", None) is not None
+                    and m.get("anilist_id", None) not in anilist_mappings
                 }
             )
 
-        # Filter out anything without an AniList ID
-        anilist_mappings = {
-            n: m
-            for n, m in anilist_mappings.items()
-            if m.get("anilist_id", None) is not None
-        }
+        return anilist_mappings
 
-        # Sort by AniList ID
-        anilist_mappings = dict(
-            sorted(anilist_mappings.items(), key=lambda item: item[1].get("anilist_id"))
-        )
+    def get_mappings_from_anibridge_mappings(
+        self,
+        tvdb_id=None,
+        tmdb_id=None,
+        imdb_id=None,
+        tmdb_type="movie",
+        anilist_mappings=None,
+    ):
+        """Get mappings from the AniBridge mappings
+
+        Args:
+            tvdb_id (int): TVDB ID
+            tmdb_id (int): TMDB ID
+            imdb_id (int): IMDb ID
+            tmdb_type (str): TMDB type. Can be "movie" or "show"
+            anilist_mappings (dict): Dictionary of AniList mappings.
+                Defaults to None, which will create a new dictionary
+        """
+
+        if anilist_mappings is None:
+            anilist_mappings = {}
+
+        if tmdb_type not in ["movie", "show"]:
+            raise ValueError("tmdb_type must be 'movie' or 'show'")
+
+        # Check we have exactly one ID specified here
+        non_none_sum = sum(v is not None for v in [tvdb_id, tmdb_id, imdb_id])
+
+        if non_none_sum == 0:
+            raise ValueError(
+                "At least one of tvdb_id, tmdb_id, and imdb_id must be provided"
+            )
+
+        if tvdb_id is not None:
+            anilist_mappings.update(
+                {
+                    int(n): m
+                    for n, m in self.anibridge_mappings.items()
+                    if m.get("tvdb_id", None) == tvdb_id
+                    and int(n) not in anilist_mappings
+                }
+            )
+        if tmdb_id is not None:
+            anilist_mappings.update(
+                {
+                    int(n): m
+                    for n, m in self.anibridge_mappings.items()
+                    if m.get(f"tmdb_{tmdb_type}_id", None) == tmdb_id
+                    and m.get("anilist_id", None) is not None
+                    and int(n) not in anilist_mappings
+                }
+            )
+        if imdb_id is not None:
+            anilist_mappings.update(
+                {
+                    int(n): m
+                    for n, m in self.anibridge_mappings.items()
+                    if m.get("imdb_id", None) == imdb_id
+                    and m.get("anilist_id", None) is not None
+                    and int(n) not in anilist_mappings
+                }
+            )
 
         return anilist_mappings
 

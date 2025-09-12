@@ -1,6 +1,7 @@
 0.9.0 (Unreleased)
 ==================
 
+- Include PlexAniBridge-Mappings to mop up some missed titles
 - Update cache if version/config changes
 - Add option to ignore SeaDex update time
 - Don't recreate cache on config change

@@ -97,10 +97,9 @@ class SeaDexRadarr(SeaDexArr):
                 self.log_no_anilist_mappings(title=radarr_title)
                 continue
 
-            for anidb_id, mapping in al_mappings.items():
+            for al_id, mapping in al_mappings.items():
 
                 # Map the TMDB ID through to AniList
-                al_id = mapping.get("anilist_id", None)
                 if al_id is None:
                     self.log_no_anilist_id()
                     continue
@@ -289,7 +288,7 @@ class SeaDexRadarr(SeaDexArr):
         return True
 
     def get_all_radarr_movies(self):
-        """Get all movies in Radarr that have an associated AniDB ID"""
+        """Get all movies in Radarr that have an associated AniList ID"""
 
         radarr_movies = []
 
