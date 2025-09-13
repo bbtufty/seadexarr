@@ -1,4 +1,4 @@
-0.9.0 (Unreleased)
+0.9.0 (2025-09-13)
 ==================
 
 - Include PlexAniBridge-Mappings to mop up some missed titles
