@@ -12,8 +12,9 @@ releases tagged on SeaDex. SeaDexArr supports both Sonarr and Radarr.
 
 For Sonarr, it works by scanning through series, matching these up via the TVDB or IMDb IDs to AniList 
 mappings via the Kometa Anime Mappings (https://github.com/Kometa-Team/Anime-IDs), AniDB mappings 
-(https://github.com/Anime-Lists/anime-lists), and ultimately finding releases in the SeaDex database. For Radarr, this 
-works much the same but instead using the TMDB and IMDb IDs. 
+(https://github.com/Anime-Lists/anime-lists), and PlexAniBridge-Mappings 
+(https://github.com/eliasbenb/PlexAniBridge-Mappings) and ultimately finding releases in the SeaDex database. For 
+Radarr, this works much the same but instead using the TMDB and IMDb IDs.
 
 SeaDexArr will then do some cuts to select a "best" release, which can be pushed to Discord via a bot, and added
 automatically to a torrent client. This should make it significantly more hands-free to keep the best Anime releases 
@@ -194,15 +195,16 @@ description of each is given below.
    of days. Defaults to 1
 - `interactive`: If True, will enable interactive mode, which when multiple torrent options are
    found, will ask for input to choose one. Otherwise, will just grab everything. Defaults to False
-- `anime_mappings`: Can provide custom mappings here. Otherwise, will use the Kometa mappings.
+- `anime_mappings`: Can provide custom Anime ID mappings here. Otherwise, will use the Kometa mappings.
   The general user should not set this. Defaults to None
-- `anidb_mappings`: Can provide custom mappings here. Otherwise, will use the AniDB mappings.
+- `anidb_mappings`: Can provide custom AniDB mappings here. Otherwise, will use the AniDB mappings.
+  The general user should not set this. Defaults to None
+- `anibridge_mappings`: Can provide custom AniBridge mappings here. Otherwise, will use the PlexAniBridge mappings.
   The general user should not set this. Defaults to None
 - `log_level`: Controls the level of logging. Can be WARNING, INFO, or DEBUG. Defaults to "INFO"
 
 ## Roadmap
 
-- Currently, some episodes (particularly movies or OVAs) can be missed. This should be improved in the future by using
-  more robust mapping between AniDB entries and AniList entries
+- Support for other mappings between TVDB/TMDB/IMDb and AniList IDs
 - Support for other torrent clients
 - Support for more torrent sites

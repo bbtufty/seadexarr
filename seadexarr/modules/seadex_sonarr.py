@@ -95,6 +95,95 @@ def get_overlapping_results(seadex_dict):
     return overlapping_results
 
 
+def check_ep_by_anime_ids(
+    ep,
+    tvdb_season,
+):
+    """Check whether to include an episode by Anime ID style
+
+    Args:
+        ep (dict): Dictionary of episode info
+        tvdb_season (int): TVDB season number
+    """
+
+    include_episode = True
+
+    # First, check by season
+    season_number = ep.get("seasonNumber", None)
+
+    # If the TVDB season is -1, this is anything but specials
+    if tvdb_season == -1 and season_number == 0:
+        include_episode = False
+
+    # Else, if we have a season defined, and it doesn't match, don't include
+    elif tvdb_season != -1 and season_number != tvdb_season:
+        include_episode = False
+
+    return include_episode
+
+
+def check_ep_by_anibridge(
+    ep,
+    tvdb_mappings,
+):
+    """Check whether to include an episode by AniBridge style
+
+    Args:
+        ep (dict): Dictionary of episode info
+        tvdb_mappings (dict): Dictionary of AniBridge-style TVDB mappings
+    """
+
+    ep_season = ep.get("seasonNumber", -1)
+    ep_episode = ep.get("episodeNumber", -1)
+
+    for season, episodes in tvdb_mappings.items():
+
+        tvdb_season = int(season.strip("s"))
+
+        # Simplest case, we have an empty string so just
+        # match by season
+        if episodes == "" and ep_season == tvdb_season:
+            return True
+
+        if ep_season != tvdb_season:
+            continue
+
+        # We may have multiple mappings per season,
+        # so we need to split
+        episodes_split = episodes.split(",")
+        for episode_split in episodes_split:
+
+            # There may be some ratio mapping that we
+            # can ignore
+            episode_split = episode_split.split("|")[0]
+
+            # The simpler case here is a single episode
+            if "-" not in episode_split:
+                episode_split_exact = int(episode_split.strip("e"))
+
+                if episode_split_exact == ep_episode:
+                    return True
+
+            # Or we need to split again, to get the start and
+            # end points
+            else:
+                episode_split_start_end = episode_split.split("-")
+                episode_split_start = int(episode_split_start_end[0].strip("e"))
+
+                # Now we might have an open-ended end point, in which case set to
+                # a large number
+                if len(episode_split_start_end) == 1:
+                    episode_split_end = 9999
+                else:
+                    episode_split_end = int(episode_split_start_end[1].strip("e"))
+
+                if episode_split_start <= ep_episode <= episode_split_end:
+                    return True
+
+    # If after all that, we haven't found anything, just return False
+    return False
+
+
 class SeaDexSonarr(SeaDexArr):
 
     def __init__(
@@ -197,10 +286,9 @@ class SeaDexSonarr(SeaDexArr):
                 self.log_no_anilist_mappings(title=sonarr_title)
                 continue
 
-            for anidb_id, mapping in al_mappings.items():
+            for al_id, mapping in al_mappings.items():
 
                 # Map the TVDB ID through to AniList
-                al_id = mapping.get("anilist_id", None)
                 if al_id is None:
                     self.log_no_anilist_id()
                     continue
@@ -329,7 +417,7 @@ class SeaDexSonarr(SeaDexArr):
                 # Get the episode list for all relevant episodes
                 ep_list = self.get_ep_list(
                     sonarr_series_id=sonarr_series_id,
-                    anidb_id=anidb_id,
+                    al_id=al_id,
                     mapping=mapping,
                 )
 
@@ -539,23 +627,33 @@ class SeaDexSonarr(SeaDexArr):
     def get_ep_list(
         self,
         sonarr_series_id,
-        anidb_id,
+        al_id,
         mapping,
     ):
         """Get a list of relevant episodes for an AniList mapping
 
         Args:
             sonarr_series_id (int): Series ID in Sonarr
-            anidb_id (int): AniDB ID
+            al_id (int): Anilist ID
             mapping (dict): Mapping dictionary between TVDB and AniList
         """
 
         # If we have any season info, pull that out now
         tvdb_season = get_tvdb_season(mapping)
-        al_id = mapping.get("anilist_id", -1)
 
+        # Check we have a sensible AL ID
         if al_id == -1:
             raise ValueError("AniList ID not defined!")
+
+        # Get the AniDB ID
+        anidb_id = mapping.get("anidb_id", None)
+
+        # Check what kind of mode we're in here,
+        # it's either AniBridge or Anime IDs
+        if "tvdb_mappings" in mapping:
+            mapping_mode = "anibridge"
+        else:
+            mapping_mode = "anime_ids"
 
         # Get all the episodes for a season. Use the raw Sonarr API
         # call here to get details
@@ -583,18 +681,19 @@ class SeaDexSonarr(SeaDexArr):
         final_ep_list = []
         for ep in ep_list:
 
-            include_episode = True
-
-            # First, check by season
-            season_number = ep.get("seasonNumber", None)
-
-            # If the TVDB season is -1, this is anything but specials
-            if tvdb_season == -1 and season_number == 0:
-                include_episode = False
-
-            # Else, if we have a season defined, and it doesn't match, don't include
-            elif tvdb_season != -1 and season_number != tvdb_season:
-                include_episode = False
+            if mapping_mode == "anime_ids":
+                include_episode = check_ep_by_anime_ids(
+                    ep=ep,
+                    tvdb_season=tvdb_season,
+                )
+            elif mapping_mode == "anibridge":
+                tvdb_mappings = mapping.get("tvdb_mappings", {})
+                include_episode = check_ep_by_anibridge(
+                    ep=ep,
+                    tvdb_mappings=tvdb_mappings,
+                )
+            else:
+                raise ValueError(f"Invalid mapping mode {mapping_mode}")
 
             # If we've passed the vibe check, include things now
             if include_episode:
@@ -611,7 +710,7 @@ class SeaDexSonarr(SeaDexArr):
         # be for anything not marked as TV, and specials as marked by
         # being in Season 0
         anidb_mapping_dict = {}
-        if al_format not in ["TV"] or tvdb_season == 0:
+        if al_format not in ["TV"] or tvdb_season == 0 and anidb_id is not None:
             anidb_item = self.anidb_mappings.findall(f"anime[@anidbid='{anidb_id}']")
 
             # If we don't find anything, no worries. If we find multiple, worries
@@ -669,27 +768,37 @@ class SeaDexSonarr(SeaDexArr):
 
         else:
 
-            # Slice the list to get the correct episodes, so any potential offsets
-            ep_offset = mapping.get("tvdb_epoffset", 0)
-            n_eps, self.al_cache = get_anilist_n_eps(
-                al_id,
-                al_cache=self.al_cache,
-            )
+            # First case, we've got Anime IDs
+            if mapping_mode == "anime_ids":
 
-            # If we don't get a number of episodes, use them all
-            if n_eps is None:
-                n_eps = len(final_ep_list) - ep_offset
+                # Slice the list to get the correct episodes, so any potential offsets
+                ep_offset = mapping.get("tvdb_epoffset", 0)
+                n_eps, self.al_cache = get_anilist_n_eps(
+                    al_id,
+                    al_cache=self.al_cache,
+                )
 
-            # Check that we're including this by the episode number. This only
-            # works for single-seasons, so be careful!
-            if tvdb_season != -1:
-                final_ep_list = [
-                    ep
-                    for ep in final_ep_list
-                    if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
-                ]
+                # If we don't get a number of episodes, use them all
+                if n_eps is None:
+                    n_eps = len(final_ep_list) - ep_offset
+
+                # Check that we're including this by the episode number. This only
+                # works for single-seasons, so be careful!
+                if tvdb_season != -1:
+                    final_ep_list = [
+                        ep
+                        for ep in final_ep_list
+                        if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
+                    ]
+                else:
+                    final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
+
+            # Or, we've got AniBridge mappings so we don't need to do anything (hooray)
+            elif mapping_mode == "anibridge":
+                pass
+
             else:
-                final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
+                raise ValueError(f"Invalid mapping mode {mapping_mode}")
 
         return final_ep_list
 
