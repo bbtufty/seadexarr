@@ -15,8 +15,7 @@ def get_nyaa_url(url):
         url (str): URL to get Nyaa torrent link
     """
 
-    nyaa = pynyaa.get(url)
-    parsed_url = str(nyaa.torrent_file)
+    parsed_url = pynyaa.get(url).torrent.url
 
     return parsed_url
 
