@@ -292,18 +292,25 @@ class SeaDexRadarr(SeaDexArr):
 
         radarr_movies = []
 
-        # Search through TMDB and IMDb IDs
-        all_tmdb_ids = [
-            self.anime_mappings[x].get("tmdb_movie_id", None)
-            for x in self.anime_mappings
-            if "tmdb_movie_id" in self.anime_mappings[x].keys()
-        ]
+        all_tmdb_ids = []
+        all_imdb_ids = []
 
-        all_imdb_ids = [
-            self.anime_mappings[x].get("imdb_id", None)
-            for x in self.anime_mappings
-            if "imdb_id" in self.anime_mappings[x].keys()
-        ]
+        # Search through TMDB and IMDb IDs via Anime IDs and AniBridge mappings
+        for mapping in [
+            self.anime_mappings,
+            self.anibridge_mappings,
+        ]:
+            all_tmdb_ids.extend(
+                mapping[x].get("tmdb_movie_id", None)
+                for x in mapping
+                if "tmdb_movie_id" in mapping[x].keys()
+            )
+
+            all_imdb_ids.extend(
+                mapping[x].get("imdb_id", None)
+                for x in mapping
+                if "imdb_id" in mapping[x].keys()
+            )
 
         for m in self.radarr.all_movies():
 

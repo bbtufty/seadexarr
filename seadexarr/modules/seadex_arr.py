@@ -647,7 +647,6 @@ class SeaDexArr:
                     int(n): m
                     for n, m in self.anibridge_mappings.items()
                     if m.get(f"tmdb_{tmdb_type}_id", None) == tmdb_id
-                    and m.get("anilist_id", None) is not None
                     and int(n) not in anilist_mappings
                 }
             )
@@ -657,7 +656,6 @@ class SeaDexArr:
                     int(n): m
                     for n, m in self.anibridge_mappings.items()
                     if m.get("imdb_id", None) == imdb_id
-                    and m.get("anilist_id", None) is not None
                     and int(n) not in anilist_mappings
                 }
             )

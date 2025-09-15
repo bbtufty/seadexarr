@@ -1,3 +1,8 @@
+1.0.0 (Unreleased)
+==================
+
+- Use AniBridge mappings to mop up missed Sonarr/Radarr titles
+
 0.9.0 (2025-09-13)
 ==================
 
