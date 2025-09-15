@@ -581,18 +581,25 @@ class SeaDexSonarr(SeaDexArr):
 
         sonarr_series = []
 
-        # Search through TVDB and IMDb IDs
-        all_tvdb_ids = [
-            self.anime_mappings[x].get("tvdb_id", None)
-            for x in self.anime_mappings
-            if "tvdb_id" in self.anime_mappings[x].keys()
-        ]
+        all_tvdb_ids = []
+        all_imdb_ids = []
 
-        all_imdb_ids = [
-            self.anime_mappings[x].get("imdb_id", None)
-            for x in self.anime_mappings
-            if "imdb_id" in self.anime_mappings[x].keys()
-        ]
+        # Search through TVDB and IMDb IDs via Anime IDs and AniBridge mappings
+        for mapping in [
+            self.anime_mappings,
+            self.anibridge_mappings,
+        ]:
+            all_tvdb_ids.extend(
+                mapping[x].get("tvdb_id", None)
+                for x in mapping
+                if "tvdb_id" in mapping[x].keys()
+            )
+
+            all_imdb_ids.extend(
+                mapping[x].get("imdb_id", None)
+                for x in mapping
+                if "imdb_id" in mapping[x].keys()
+            )
 
         for s in self.sonarr.all_series():
 
