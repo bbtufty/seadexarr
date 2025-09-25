@@ -118,14 +118,17 @@ preference, and then run the code again.
 
 ## How SeaDexArr chooses a release
 
-SeaDexArr performs a number of cuts to get to a single best release for you. First, it will filter out all torrents
-coming from trackers that haven't been specified (if you haven't been more granular, this will be all public trackers
-and potentially all private trackers; see ``trackers``). Then, if you only want public torrents (``public_only``), it
-will filter out anything from a private tracker. Next, if you only want to grab releases marked by SeaDex as "best"
-(``want_best``), it will down-select any torrents marked as "best", as long as there's at least one. Finally, if
-you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as there's at least
-one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio torrents (so long
-as there's at least one not tagged as dual-audio). By doing this, SeaDexArr should generally find a single best
+SeaDexArr performs a number of cuts to get to a single best release for you. 
+First, it will filter out all torrents that have any tags as defined in ``ignore_tags``.
+Then, it will filter out all torrents coming from trackers that haven't been specified (if you haven't been more 
+granular, this will be all public trackers and potentially all private trackers; see ``trackers``). 
+Then, if you only want public torrents (``public_only``), it will filter out anything from a private tracker. 
+Next, if you only want to grab releases marked by SeaDex as "best" (``want_best``), it will down-select any torrents 
+marked as "best", as long as there's at least one. 
+Finally, if you want dual audio (``prefer_dual_audio``), it will down-select any dual-audio torrents, as long as 
+there's at least one. If this is instead set to ``False``, it will do the opposite, filtering out any dual-audio 
+torrents (so long as there's at least one not tagged as dual-audio). 
+By doing this, SeaDexArr should generally find a single best
 torrent, though if you're in interactive mode (``interactive``) and there are multiple options that match your
 criteria, it will give you an option to select one (or multiple).
 
@@ -167,6 +170,10 @@ description of each is given below.
 - `prefer_dual_audio`: Prefer results tagged as dual audio, if any exist. If False, will instead prefer Ja-only 
   releases. Defaults to True
 - `want_best`: Prefer results tagged as best, if any exist. Defaults to True
+- `ignore_tags`: Can filter out based on SeaDex tags. Some examples:
+  - Dolby Vision
+  - Misplaced Special
+  - Deband Required
 - `trackers`: Can manually select a list of trackers. Defaults to None, which will use all the 
   public trackers and private trackers if `public_only` is False. All trackers with torrents on SeaDex, and whether 
   they are supported are below.
