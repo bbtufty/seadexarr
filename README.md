@@ -155,6 +155,7 @@ description of each is given below.
    set a category
 - `radarr_torrent_category`: Radarr torrent import category, if you have one. Defaults to None, which won't 
    set a category
+- `torrent_tags`: Tags to add to the torrent when added to a client. Defaults to None, which won't add any tags
 - `max_torrents_to_add`: used to limit the number of torrents you add in one run. Defaults to None, which 
    will just add everything it finds
 

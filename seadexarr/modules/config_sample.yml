@@ -18,6 +18,7 @@ qbit_info:
 # Categories for added torrents
 sonarr_torrent_category:
 radarr_torrent_category:
+torrent_tags:
 
 # Ignore SeaDex update times?
 ignore_seadex_update_times: false
