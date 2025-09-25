@@ -214,6 +214,7 @@ class SeaDexArr:
 
         # Hooks between torrents and Arrs, and torrent number bookkeeping
         self.torrent_category = self.config.get(f"{arr}_torrent_category", None)
+        self.torrent_tags = self.config.get("torrent_tags", None)
         self.max_torrents_to_add = self.config.get("max_torrents_to_add", None)
         self.torrents_added = 0
 
@@ -1429,6 +1430,7 @@ class SeaDexArr:
         result = self.qbit.torrents_add(
             urls=torrent_url,
             category=self.torrent_category,
+            tags=self.torrent_tags,
         )
         if result != "Ok.":
             raise Exception("Failed to add torrent")
