@@ -35,6 +35,7 @@ discord_url:
 public_only: true
 prefer_dual_audio: true
 want_best: true
+ignore_tags:
 trackers:
 
 # Advanced settings

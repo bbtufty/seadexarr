@@ -225,6 +225,11 @@ class SeaDexArr:
         self.prefer_dual_audio = self.config.get("prefer_dual_audio", True)
         self.want_best = self.config.get("want_best", True)
 
+        ignore_tags = self.config.get("ignore_tags", None)
+        if ignore_tags is None:
+            ignore_tags = []
+        self.ignore_tags = ignore_tags
+
         trackers = self.config.get("trackers", None)
 
         # If we don't have any trackers selected, build a list from public
@@ -697,6 +702,11 @@ class SeaDexArr:
         """
 
         final_torrent_list = copy.deepcopy(sd_entry.torrents)
+
+        # Filter out any tags
+        final_torrent_list = [
+            t  for t in final_torrent_list if len(set(self.ignore_tags).intersection(set(t.tags))) == 0
+        ]
 
         # Filter down by allowed trackers
         final_torrent_list = [
