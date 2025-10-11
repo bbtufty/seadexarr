@@ -458,7 +458,7 @@ class SeaDexArr:
         except EntryNotFoundError:
             pass
         except httpx.ConnectError:
-            raise Warning("Could not connect to SeaDex. Website may be down")
+            self.logger.warning("Could not connect to SeaDex. Website may be down")
 
         return sd_entry
 
@@ -1143,9 +1143,10 @@ class SeaDexArr:
 
                     # At this point, we need an episode list from Sonarr
                     if ep_list is None:
-                        raise Warning(
+                        self.logger.warning(
                             "If checking against individual episodes, you need to pass the Sonarr ep_list"
                         )
+                        continue
 
                     # For each episode we've parsed from the torrent, check if a) it exists in the Sonarr list, b) if
                     # the release group matches, and c) if the filesizes match. If there's any mismatch between release

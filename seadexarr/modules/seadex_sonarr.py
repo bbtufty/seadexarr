@@ -255,85 +255,64 @@ class SeaDexSonarr(SeaDexArr):
         # Now start looping over these series, finding any potential mappings
         for sonarr_idx, sonarr_series in enumerate(all_sonarr_series):
 
-            # Pull Sonarr and database info out
-            tvdb_id = sonarr_series.tvdbId
-            imdb_id = sonarr_series.imdbId
-            sonarr_title = sonarr_series.title
-            sonarr_series_id = sonarr_series.id
+            try:
 
-            self.log_arr_item_start(
-                arr="sonarr",
-                item_title=sonarr_title,
-                n_item=sonarr_idx + 1,
-                n_items=n_sonarr,
-            )
+                # Pull Sonarr and database info out
+                tvdb_id = sonarr_series.tvdbId
+                imdb_id = sonarr_series.imdbId
+                sonarr_title = sonarr_series.title
+                sonarr_series_id = sonarr_series.id
 
-            # If we're not monitored, then skip if ignore_unmonitored is switched on
-            if not sonarr_series.monitored and self.ignore_unmonitored:
-                self.log_arr_item_unmonitored(
+                self.log_arr_item_start(
                     arr="sonarr",
                     item_title=sonarr_title,
-                )
-                continue
-
-            # Get the mappings from the Sonarr series to AniList
-            al_mappings = self.get_anilist_ids(
-                tvdb_id=tvdb_id,
-                imdb_id=imdb_id,
-            )
-
-            if len(al_mappings) == 0:
-                self.log_no_anilist_mappings(title=sonarr_title)
-                continue
-
-            for al_id, mapping in al_mappings.items():
-
-                # Map the TVDB ID through to AniList
-                if al_id is None:
-                    self.log_no_anilist_id()
-                    continue
-
-                # Get the SeaDex entry if it exists
-                sd_entry = self.get_seadex_entry(al_id=al_id)
-                if sd_entry is None:
-                    self.log_no_sd_entry(al_id=al_id)
-                    continue
-                sd_url = sd_entry.url
-
-                # Check if we've already got this cached
-                al_id_in_cache = self.check_al_id_in_cache(
-                    arr="sonarr",
-                    al_id=al_id,
-                    seadex_entry=sd_entry,
+                    n_item=sonarr_idx + 1,
+                    n_items=n_sonarr,
                 )
 
-                if al_id_in_cache and not self.ignore_seadex_update_times:
-                    self.logger.info(
-                        centred_string(
-                            f"Cache time for AniList ID {al_id} matches SeaDex updated time",
-                            total_length=self.log_line_length,
-                        )
-                    )
-                    self.logger.info(
-                        centred_string(
-                            "-" * self.log_line_length,
-                            total_length=self.log_line_length,
-                        )
+                # If we're not monitored, then skip if ignore_unmonitored is switched on
+                if not sonarr_series.monitored and self.ignore_unmonitored:
+                    self.log_arr_item_unmonitored(
+                        arr="sonarr",
+                        item_title=sonarr_title,
                     )
                     continue
 
-                # Also check if it's in the Radarr cache, if we have that option
-                if self.ignore_movies_in_radarr and not self.ignore_seadex_update_times:
-                    al_id_in_radarr_cache = self.check_al_id_in_cache(
-                        arr="radarr",
+                # Get the mappings from the Sonarr series to AniList
+                al_mappings = self.get_anilist_ids(
+                    tvdb_id=tvdb_id,
+                    imdb_id=imdb_id,
+                )
+
+                if len(al_mappings) == 0:
+                    self.log_no_anilist_mappings(title=sonarr_title)
+                    continue
+
+                for al_id, mapping in al_mappings.items():
+
+                    # Map the TVDB ID through to AniList
+                    if al_id is None:
+                        self.log_no_anilist_id()
+                        continue
+
+                    # Get the SeaDex entry if it exists
+                    sd_entry = self.get_seadex_entry(al_id=al_id)
+                    if sd_entry is None:
+                        self.log_no_sd_entry(al_id=al_id)
+                        continue
+                    sd_url = sd_entry.url
+
+                    # Check if we've already got this cached
+                    al_id_in_cache = self.check_al_id_in_cache(
+                        arr="sonarr",
                         al_id=al_id,
                         seadex_entry=sd_entry,
                     )
-                    if al_id_in_radarr_cache:
+
+                    if al_id_in_cache and not self.ignore_seadex_update_times:
                         self.logger.info(
                             centred_string(
-                                f"Found AniList ID {al_id} in Radarr cache, "
-                                f"and cache time matches SeaDex updated time",
+                                f"Cache time for AniList ID {al_id} matches SeaDex updated time",
                                 total_length=self.log_line_length,
                             )
                         )
@@ -345,231 +324,267 @@ class SeaDexSonarr(SeaDexArr):
                         )
                         continue
 
-                # Get the AniList title
-                anilist_title = self.get_anilist_title(
-                    al_id=al_id,
-                    sd_entry=sd_entry,
-                )
-
-                # Setup info for cache
-                cache_details = {
-                    "name": anilist_title,
-                    "updated_at": sd_entry.updated_at,
-                    "torrent_hashes": [],
-                }
-
-                # If we have a Radarr instance, and we don't want to add movies that
-                # are already in Radarr, do that now
-                if (
-                    self.radarr is not None
-                    and self.all_radarr_movies is not None
-                    and self.ignore_movies_in_radarr
-                ):
-
-                    radarr_movies = []
-
-                    # Make sure these are flagged as specials since
-                    # sometimes shows and movies are all lumped together
-                    mapping_season = mapping.get("tvdb_season", -1)
-                    if mapping_season == 0:
-
-                        mapping_tmdb_id = mapping.get("tmdb_movie_id", None)
-                        mapping_imdb_id = mapping.get("imdb_id", None)
-
-                        for m in self.all_radarr_movies:
-
-                            # Check by TMDB IDs
-                            if mapping_tmdb_id is not None:
-                                if (
-                                    m.tmdbId == mapping_tmdb_id
-                                    and m not in radarr_movies
-                                ):
-                                    radarr_movies.append(m)
-
-                            # Check by IMDb IDs
-                            if mapping_imdb_id is not None:
-                                if (
-                                    m.imdbId == mapping_imdb_id
-                                    and m not in radarr_movies
-                                ):
-                                    radarr_movies.append(m)
-
-                    if len(radarr_movies) > 0:
-
-                        for movie in radarr_movies:
+                    # Also check if it's in the Radarr cache, if we have that option
+                    if self.ignore_movies_in_radarr and not self.ignore_seadex_update_times:
+                        al_id_in_radarr_cache = self.check_al_id_in_cache(
+                            arr="radarr",
+                            al_id=al_id,
+                            seadex_entry=sd_entry,
+                        )
+                        if al_id_in_radarr_cache:
                             self.logger.info(
                                 centred_string(
-                                    f"{movie.title} found in Radarr, will skip",
+                                    f"Found AniList ID {al_id} in Radarr cache, "
+                                    f"and cache time matches SeaDex updated time",
+                                    total_length=self.log_line_length,
+                                )
+                            )
+                            self.logger.info(
+                                centred_string(
+                                    "-" * self.log_line_length,
+                                    total_length=self.log_line_length,
+                                )
+                            )
+                            continue
+
+                    # Get the AniList title
+                    anilist_title = self.get_anilist_title(
+                        al_id=al_id,
+                        sd_entry=sd_entry,
+                    )
+
+                    # Setup info for cache
+                    cache_details = {
+                        "name": anilist_title,
+                        "updated_at": sd_entry.updated_at,
+                        "torrent_hashes": [],
+                    }
+
+                    # If we have a Radarr instance, and we don't want to add movies that
+                    # are already in Radarr, do that now
+                    if (
+                        self.radarr is not None
+                        and self.all_radarr_movies is not None
+                        and self.ignore_movies_in_radarr
+                    ):
+
+                        radarr_movies = []
+
+                        # Make sure these are flagged as specials since
+                        # sometimes shows and movies are all lumped together
+                        mapping_season = mapping.get("tvdb_season", -1)
+                        if mapping_season == 0:
+
+                            mapping_tmdb_id = mapping.get("tmdb_movie_id", None)
+                            mapping_imdb_id = mapping.get("imdb_id", None)
+
+                            for m in self.all_radarr_movies:
+
+                                # Check by TMDB IDs
+                                if mapping_tmdb_id is not None:
+                                    if (
+                                        m.tmdbId == mapping_tmdb_id
+                                        and m not in radarr_movies
+                                    ):
+                                        radarr_movies.append(m)
+
+                                # Check by IMDb IDs
+                                if mapping_imdb_id is not None:
+                                    if (
+                                        m.imdbId == mapping_imdb_id
+                                        and m not in radarr_movies
+                                    ):
+                                        radarr_movies.append(m)
+
+                        if len(radarr_movies) > 0:
+
+                            for movie in radarr_movies:
+                                self.logger.info(
+                                    centred_string(
+                                        f"{movie.title} found in Radarr, will skip",
+                                        total_length=self.log_line_length,
+                                    )
+                                )
+
+                            self.logger.info(
+                                centred_string(
+                                    "-" * self.log_line_length,
                                     total_length=self.log_line_length,
                                 )
                             )
 
-                        self.logger.info(
-                            centred_string(
-                                "-" * self.log_line_length,
-                                total_length=self.log_line_length,
-                            )
+                            time.sleep(self.sleep_time)
+                            continue
+
+                    # Get the episode list for all relevant episodes
+                    ep_list = self.get_ep_list(
+                        sonarr_series_id=sonarr_series_id,
+                        al_id=al_id,
+                        mapping=mapping,
+                    )
+
+                    if ep_list is None:
+                        continue
+
+                    # If all episodes are unmonitored, then skip if ignore_unmonitored is switched on
+                    ep_list_monitored = [x.get("monitored", True) for x in ep_list]
+                    if not any(ep_list_monitored) and self.ignore_unmonitored:
+                        self.log_anilist_item_unmonitored(
+                            arr="sonarr",
+                            item_title=anilist_title,
+                        )
+                        time.sleep(self.sleep_time)
+                        continue
+
+                    sonarr_release_dict = self.get_sonarr_release_dict(ep_list=ep_list)
+                    sonarr_release_groups = list(sonarr_release_dict.keys())
+
+                    self.logger.debug(
+                        centred_string(
+                            f"Sonarr release group(s): {', '.join(sonarr_release_groups)}",
+                            total_length=self.log_line_length,
+                        )
+                    )
+
+                    # Produce a dictionary of info from the SeaDex request
+                    seadex_dict = self.get_seadex_dict(sd_entry=sd_entry)
+
+                    if len(seadex_dict) == 0:
+                        self.log_no_seadex_releases()
+
+                        self.update_cache(
+                            arr="sonarr",
+                            al_id=al_id,
+                            cache_details=cache_details,
                         )
 
                         time.sleep(self.sleep_time)
                         continue
 
-                # Get the episode list for all relevant episodes
-                ep_list = self.get_ep_list(
-                    sonarr_series_id=sonarr_series_id,
-                    al_id=al_id,
-                    mapping=mapping,
-                )
+                    self.logger.debug(
+                        centred_string(
+                            f"SeaDex: {', '.join(seadex_dict)}",
+                            total_length=self.log_line_length,
+                        )
+                    )
 
-                # If all episodes are unmonitored, then skip if ignore_unmonitored is switched on
-                ep_list_monitored = [x.get("monitored", True) for x in ep_list]
-                if not any(ep_list_monitored) and self.ignore_unmonitored:
-                    self.log_anilist_item_unmonitored(
+                    # Parse out filenames and check for overlaps
+                    seadex_dict = self.parse_episodes_from_seadex(seadex_dict=seadex_dict)
+                    overlapping_results = get_overlapping_results(seadex_dict=seadex_dict)
+
+                    # If we're in interactive mode and there are multiple equivalent options here, then select
+                    if self.interactive and len(seadex_dict) > 1 and overlapping_results:
+                        seadex_dict = self.filter_seadex_interactive(
+                            seadex_dict=seadex_dict,
+                            sd_entry=sd_entry,
+                        )
+
+                    # Filter downloads by whether the episodes in each torrent match the release
+                    # group we have in Sonarr
+                    torrent_hashes, seadex_dict = self.filter_seadex_downloads(
+                        al_id=al_id,
+                        seadex_dict=seadex_dict,
                         arr="sonarr",
-                        item_title=anilist_title,
+                        arr_release_dict=sonarr_release_dict,
+                        ep_list=ep_list,
                     )
-                    time.sleep(self.sleep_time)
-                    continue
 
-                sonarr_release_dict = self.get_sonarr_release_dict(ep_list=ep_list)
-                sonarr_release_groups = list(sonarr_release_dict.keys())
+                    any_to_download = self.get_any_to_download(seadex_dict=seadex_dict)
 
-                self.logger.debug(
-                    centred_string(
-                        f"Sonarr release group(s): {', '.join(sonarr_release_groups)}",
-                        total_length=self.log_line_length,
-                    )
-                )
+                    if any_to_download:
+                        self.log_arr_seadex_mismatch(
+                            arr="sonarr",
+                            seadex_dict=seadex_dict,
+                        )
+                        fields, anilist_thumb = self.get_seadex_fields(
+                            arr="sonarr",
+                            al_id=al_id,
+                            release_group=sonarr_release_groups,
+                            seadex_dict=seadex_dict,
+                        )
 
-                # Produce a dictionary of info from the SeaDex request
-                seadex_dict = self.get_seadex_dict(sd_entry=sd_entry)
+                        # If we've got stuff, time to do something!
+                        if len(seadex_dict) > 0:
 
-                if len(seadex_dict) == 0:
-                    self.log_no_seadex_releases()
+                            # Keep track of how many torrents we've added
+                            n_torrents_added = 0
 
+                            # Add torrents to qBittorrent
+                            if self.qbit is not None:
+                                n_torrents_added += self.add_torrent(
+                                    torrent_dict=seadex_dict,
+                                    torrent_client="qbit",
+                                )
+
+                            # Otherwise, increment by the number of torrents in the SeaDex dict
+                            else:
+                                n_torrents_added += len(seadex_dict)
+                                self.torrents_added += len(seadex_dict)
+
+                            # Push a message to Discord if we've added anything
+                            if self.discord_url is not None and n_torrents_added > 0:
+                                discord_push(
+                                    url=self.discord_url,
+                                    arr_title=sonarr_title,
+                                    al_title=anilist_title,
+                                    seadex_url=sd_url,
+                                    fields=fields,
+                                    thumb_url=anilist_thumb,
+                                )
+
+                            if self.max_torrents_to_add is not None:
+                                if self.torrents_added >= self.max_torrents_to_add:
+                                    self.log_max_torrents_added()
+                                    return True
+
+                    else:
+
+                        self.logger.info(
+                            centred_string(
+                                f"You already have the recommended release(s) for this title",
+                                total_length=self.log_line_length,
+                            )
+                        )
+
+                    # Update and save out the cache
+                    cache_details.update({"torrent_hashes": torrent_hashes})
                     self.update_cache(
                         arr="sonarr",
                         al_id=al_id,
                         cache_details=cache_details,
                     )
 
-                    time.sleep(self.sleep_time)
-                    continue
-
-                self.logger.debug(
-                    centred_string(
-                        f"SeaDex: {', '.join(seadex_dict)}",
-                        total_length=self.log_line_length,
-                    )
-                )
-
-                # Parse out filenames and check for overlaps
-                seadex_dict = self.parse_episodes_from_seadex(seadex_dict=seadex_dict)
-                overlapping_results = get_overlapping_results(seadex_dict=seadex_dict)
-
-                # If we're in interactive mode and there are multiple equivalent options here, then select
-                if self.interactive and len(seadex_dict) > 1 and overlapping_results:
-                    seadex_dict = self.filter_seadex_interactive(
-                        seadex_dict=seadex_dict,
-                        sd_entry=sd_entry,
-                    )
-
-                # Filter downloads by whether the episodes in each torrent match the release
-                # group we have in Sonarr
-                torrent_hashes, seadex_dict = self.filter_seadex_downloads(
-                    al_id=al_id,
-                    seadex_dict=seadex_dict,
-                    arr="sonarr",
-                    arr_release_dict=sonarr_release_dict,
-                    ep_list=ep_list,
-                )
-
-                any_to_download = self.get_any_to_download(seadex_dict=seadex_dict)
-
-                if any_to_download:
-                    self.log_arr_seadex_mismatch(
-                        arr="sonarr",
-                        seadex_dict=seadex_dict,
-                    )
-                    fields, anilist_thumb = self.get_seadex_fields(
-                        arr="sonarr",
-                        al_id=al_id,
-                        release_group=sonarr_release_groups,
-                        seadex_dict=seadex_dict,
-                    )
-
-                    # If we've got stuff, time to do something!
-                    if len(seadex_dict) > 0:
-
-                        # Keep track of how many torrents we've added
-                        n_torrents_added = 0
-
-                        # Add torrents to qBittorrent
-                        if self.qbit is not None:
-                            n_torrents_added += self.add_torrent(
-                                torrent_dict=seadex_dict,
-                                torrent_client="qbit",
-                            )
-
-                        # Otherwise, increment by the number of torrents in the SeaDex dict
-                        else:
-                            n_torrents_added += len(seadex_dict)
-                            self.torrents_added += len(seadex_dict)
-
-                        # Push a message to Discord if we've added anything
-                        if self.discord_url is not None and n_torrents_added > 0:
-                            discord_push(
-                                url=self.discord_url,
-                                arr_title=sonarr_title,
-                                al_title=anilist_title,
-                                seadex_url=sd_url,
-                                fields=fields,
-                                thumb_url=anilist_thumb,
-                            )
-
-                        if self.max_torrents_to_add is not None:
-                            if self.torrents_added >= self.max_torrents_to_add:
-                                self.log_max_torrents_added()
-                                return True
-
-                else:
-
                     self.logger.info(
                         centred_string(
-                            f"You already have the recommended release(s) for this title",
+                            "-" * self.log_line_length,
                             total_length=self.log_line_length,
                         )
                     )
 
-                # Update and save out the cache
-                cache_details.update({"torrent_hashes": torrent_hashes})
-                self.update_cache(
-                    arr="sonarr",
-                    al_id=al_id,
-                    cache_details=cache_details,
-                )
+                    # Add in a wait, if required
+                    time.sleep(self.sleep_time)
 
                 self.logger.info(
                     centred_string(
-                        "-" * self.log_line_length,
+                        self.log_line_sep * self.log_line_length,
                         total_length=self.log_line_length,
                     )
                 )
 
-                # Add in a wait, if required
-                time.sleep(self.sleep_time)
+                if self.max_torrents_to_add is not None:
+                    if self.torrents_added >= self.max_torrents_to_add:
+                        self.log_max_torrents_added()
+                        return True
 
-            self.logger.info(
-                centred_string(
-                    self.log_line_sep * self.log_line_length,
-                    total_length=self.log_line_length,
+            except Exception as e:
+                self.logger.error(f"Exception: {e}")
+                self.logger.info(
+                    centred_string(
+                        self.log_line_sep * self.log_line_length,
+                        total_length=self.log_line_length,
+                    )
                 )
-            )
-
-            if self.max_torrents_to_add is not None:
-                if self.torrents_added >= self.max_torrents_to_add:
-                    self.log_max_torrents_added()
-                    return True
+                continue
 
             # Add in a blank line to break things up
             self.logger.info("")
@@ -674,7 +689,8 @@ class SeaDexSonarr(SeaDexArr):
         eps_req = requests.get(eps_req_url)
 
         if eps_req.status_code != 200:
-            raise Warning("Failed get episodes data from Sonarr")
+            self.logger.warning("Failed get episodes data from Sonarr")
+            return None
 
         ep_list = eps_req.json()
 
