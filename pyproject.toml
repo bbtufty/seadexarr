@@ -33,7 +33,7 @@ classifiers = [
 dependencies = [
     "arrapi == 1.4.14",
     "beautifulsoup4 == 4.14.2",
-    "colorlog == 6.9.0",
+    "colorlog == 6.10.1",
     "discordwebhook == 1.0.3",
     "httpx == 0.28.1",
     "pynyaa == 3.0.0",
