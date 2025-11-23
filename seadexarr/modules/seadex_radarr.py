@@ -315,12 +315,18 @@ class SeaDexRadarr(SeaDexArr):
         all_imdb_ids = list(self._v3_index["imdb_movie"].keys())
 
         for m in self.radarr.all_movies():
+            
             # Skip series if "seadexarr_ignore" tag is applied in Sonarr
             ignore_series = any(t.label == 'seadexarr-ignore' for t in m.tags)
             if ignore_series:
-                self.logger.debug(f"Ignoring movie: {m.title}")
+                self.logger.debug(f"Ignoring movie because tagged seadexarr-ignore: {m.title}")
                 continue
             
+            # If we have nothing and we're ignoring empty movies, skip
+            if m.sizeOnDisk == 0 and self.ignore_empty:
+                self.logger.debug(f"Ignoring movie because ignore_empty is True: {m.title}")
+                continue
+
             # Check by TMDB IDs
             tmdb_id = m.tmdbId
             if tmdb_id in all_tmdb_ids and m not in radarr_movies:
