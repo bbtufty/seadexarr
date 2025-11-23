@@ -185,6 +185,9 @@ class SeaDexArr:
         # Ignore unmonitored flag
         self.ignore_unmonitored = self.config.get(f"{arr}_ignore_unmonitored", False)
 
+        # Ignore empty flag
+        self.ignore_empty = self.config.get(f"{arr}_ignore_empty", False)
+
         # qBit
         self.qbit = None
         qbit_info = self.config.get("qbit_info", None)
