@@ -1,6 +1,7 @@
 1.0.0 (Unreleased)
 ==================
 
+- Add "ignore_empty" option, which allows you to ignore series/movies that don't already have something downloaded
 - Add "torrent_tags", which allows you to tag torrents as added to qBittorrent
 - Add "ignore tags" option, which allows you to filter out various tags
 - Use AniBridge mappings to mop up missed Sonarr/Radarr titles
