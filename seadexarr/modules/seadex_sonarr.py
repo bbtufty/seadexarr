@@ -618,6 +618,10 @@ class SeaDexSonarr(SeaDexArr):
 
         for s in self.sonarr.all_series():
 
+            # If we have nothing and we're ignoring empty series, skip
+            if s.sizeOnDisk == 0 and self.ignore_empty:
+                continue
+
             # Check by TVDB IDs
             tvdb_id = s.tvdbId
             if tvdb_id in all_tvdb_ids and s not in sonarr_series:

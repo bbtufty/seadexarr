@@ -326,6 +326,10 @@ class SeaDexRadarr(SeaDexArr):
 
         for m in self.radarr.all_movies():
 
+            # If we have nothing and we're ignoring empty movies, skip
+            if m.sizeOnDisk == 0 and self.ignore_empty:
+                continue
+
             # Check by TMDB IDs
             tmdb_id = m.tmdbId
             if tmdb_id in all_tmdb_ids and m not in radarr_movies:
