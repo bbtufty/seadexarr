@@ -726,40 +726,28 @@ class SeaDexArr:
         best_torrents = [t for t in final_torrent_list if t.is_best]
         any_best = len(best_torrents) > 0
 
+        # If the user wants only 'best' releases and any exist, narrow down to those
         if self.want_best and any_best:
-            final_torrent_list = best_torrents
+            candidates = best_torrents
+        else:
+            candidates = final_torrent_list
 
         # Now, if we prefer dual audio then remove any that aren't
         # tagged, so long as at least one is tagged
         if self.prefer_dual_audio:
-            any_dual_audio = any([t.is_dual_audio for t in final_torrent_list])
-            if any_dual_audio:
-                final_torrent_list = [t for t in final_torrent_list if t.is_dual_audio]
-
+            duals = [t for t in candidates if t.is_dual_audio]
+            if len(duals) > 0:
+                candidates = duals
         # Or, if it's False, do the opposite
         else:
-            any_ja_audio = any([not t.is_dual_audio for t in final_torrent_list])
-            if any_ja_audio:
-                ja_audio_torrents = [
-                    t for t in final_torrent_list if not t.is_dual_audio
-                ]
-
-                # When best is requested, prefer non-dual audio only if it
-                # does not force us off the best tier. Otherwise, fall back
-                # to the best torrents even if they are dual audio.
-                if self.want_best and any_best:
-                    ja_audio_best = [t for t in ja_audio_torrents if t.is_best]
-                    if len(ja_audio_best) > 0:
-                        final_torrent_list = ja_audio_best
-                    else:
-                        final_torrent_list = best_torrents
-                else:
-                    final_torrent_list = ja_audio_torrents
+            non_duals = [t for t in candidates if not t.is_dual_audio]
+            if len(non_duals) > 0:
+                candidates = non_duals
 
         # Pull out release groups, URLs, and various other useful info as a
         # dictionary
         seadex_release_groups = {}
-        for t in final_torrent_list:
+        for t in candidates:
 
             if t.release_group not in seadex_release_groups:
                 seadex_release_groups[t.release_group] = {"urls": {}}
