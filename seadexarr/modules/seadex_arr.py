@@ -721,11 +721,13 @@ class SeaDexArr:
             ]
 
         # Pull out torrents tagged as best, so long as at least one
-        # is tagged as best
-        if self.want_best:
-            any_best = any([t.is_best for t in final_torrent_list])
-            if any_best:
-                final_torrent_list = [t for t in final_torrent_list if t.is_best]
+        # is tagged as best. Keep a copy so we can fallback if audio
+        # preferences would otherwise downgrade quality
+        best_torrents = [t for t in final_torrent_list if t.is_best]
+        any_best = len(best_torrents) > 0
+
+        if self.want_best and any_best:
+            final_torrent_list = best_torrents
 
         # Now, if we prefer dual audio then remove any that aren't
         # tagged, so long as at least one is tagged
@@ -738,9 +740,21 @@ class SeaDexArr:
         else:
             any_ja_audio = any([not t.is_dual_audio for t in final_torrent_list])
             if any_ja_audio:
-                final_torrent_list = [
+                ja_audio_torrents = [
                     t for t in final_torrent_list if not t.is_dual_audio
                 ]
+
+                # When best is requested, prefer non-dual audio only if it
+                # does not force us off the best tier. Otherwise, fall back
+                # to the best torrents even if they are dual audio.
+                if self.want_best and any_best:
+                    ja_audio_best = [t for t in ja_audio_torrents if t.is_best]
+                    if len(ja_audio_best) > 0:
+                        final_torrent_list = ja_audio_best
+                    else:
+                        final_torrent_list = best_torrents
+                else:
+                    final_torrent_list = ja_audio_torrents
 
         # Pull out release groups, URLs, and various other useful info as a
         # dictionary
