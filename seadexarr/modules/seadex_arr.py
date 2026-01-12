@@ -721,31 +721,33 @@ class SeaDexArr:
             ]
 
         # Pull out torrents tagged as best, so long as at least one
-        # is tagged as best
-        if self.want_best:
-            any_best = any([t.is_best for t in final_torrent_list])
-            if any_best:
-                final_torrent_list = [t for t in final_torrent_list if t.is_best]
+        # is tagged as best. Keep a copy so we can fallback if audio
+        # preferences would otherwise downgrade quality
+        best_torrents = [t for t in final_torrent_list if t.is_best]
+        any_best = len(best_torrents) > 0
+
+        # If the user wants only 'best' releases and any exist, narrow down to those
+        if self.want_best and any_best:
+            candidates = best_torrents
+        else:
+            candidates = final_torrent_list
 
         # Now, if we prefer dual audio then remove any that aren't
         # tagged, so long as at least one is tagged
         if self.prefer_dual_audio:
-            any_dual_audio = any([t.is_dual_audio for t in final_torrent_list])
-            if any_dual_audio:
-                final_torrent_list = [t for t in final_torrent_list if t.is_dual_audio]
-
+            duals = [t for t in candidates if t.is_dual_audio]
+            if len(duals) > 0:
+                candidates = duals
         # Or, if it's False, do the opposite
         else:
-            any_ja_audio = any([not t.is_dual_audio for t in final_torrent_list])
-            if any_ja_audio:
-                final_torrent_list = [
-                    t for t in final_torrent_list if not t.is_dual_audio
-                ]
+            non_duals = [t for t in candidates if not t.is_dual_audio]
+            if len(non_duals) > 0:
+                candidates = non_duals
 
         # Pull out release groups, URLs, and various other useful info as a
         # dictionary
         seadex_release_groups = {}
-        for t in final_torrent_list:
+        for t in candidates:
 
             if t.release_group not in seadex_release_groups:
                 seadex_release_groups[t.release_group] = {"urls": {}}
