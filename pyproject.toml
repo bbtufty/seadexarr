@@ -50,7 +50,7 @@ seadexarr = "seadexarr:seadexarr_cli"
 
 [project.optional-dependencies]
 docs = [
-    "sphinx-automodapi == 0.20.0",
+    "sphinx-automodapi == 0.22.0",
     "sphinx-rtd-theme == 3.0.2",
 ]
 
