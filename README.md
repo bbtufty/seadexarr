@@ -204,11 +204,11 @@ description of each is given below.
 - `interactive`: If True, will enable interactive mode, which when multiple torrent options are
    found, will ask for input to choose one. Otherwise, will just grab everything. Defaults to False
 - `anime_mappings`: Can provide custom Anime ID mappings here. Otherwise, will use the Kometa mappings.
-  The general user should not set this. Defaults to None
+  Set to False to disable Anime ID mappings entirely. The general user should not set this. Defaults to None
 - `anidb_mappings`: Can provide custom AniDB mappings here. Otherwise, will use the AniDB mappings.
-  The general user should not set this. Defaults to None
+  Set to False to disable AniDB mappings entirely. The general user should not set this. Defaults to None
 - `anibridge_mappings`: Can provide custom AniBridge mappings here. Otherwise, will use the PlexAniBridge mappings.
-  The general user should not set this. Defaults to None
+  Set to False to disable AniBridge mappings entirely. The general user should not set this. Defaults to None
 - `log_level`: Controls the level of logging. Can be WARNING, INFO, or DEBUG. Defaults to "INFO"
 
 ## Roadmap

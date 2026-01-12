@@ -247,16 +247,31 @@ class SeaDexArr:
         self.cache_time = self.config.get("cache_time", 1)
 
         # Get the mapping files
-        anime_mappings = self.config.get("anime_mappings", None)
-        anidb_mappings = self.config.get("anidb_mappings", None)
-        anibridge_mappings = self.config.get("anibridge_mappings", None)
+        anime_mappings_cfg = self.config.get("anime_mappings", None)
+        anidb_mappings_cfg = self.config.get("anidb_mappings", None)
+        anibridge_mappings_cfg = self.config.get("anibridge_mappings", None)
 
-        if anime_mappings is None:
+        if anime_mappings_cfg is False:
+            anime_mappings = {}
+        elif anime_mappings_cfg is None:
             anime_mappings = self.get_anime_mappings()
-        if anidb_mappings is None:
+        else:
+            anime_mappings = anime_mappings_cfg
+
+        if anidb_mappings_cfg is False:
+            anidb_mappings = None
+        elif anidb_mappings_cfg is None:
             anidb_mappings = self.get_anidb_mappings()
-        if anibridge_mappings is None:
+        else:
+            anidb_mappings = anidb_mappings_cfg
+
+        if anibridge_mappings_cfg is False:
+            anibridge_mappings = {}
+        elif anibridge_mappings_cfg is None:
             anibridge_mappings = self.get_anibridge_mappings()
+        else:
+            anibridge_mappings = anibridge_mappings_cfg
+
         self.anime_mappings = anime_mappings
         self.anidb_mappings = anidb_mappings
         self.anibridge_mappings = anibridge_mappings
@@ -517,22 +532,24 @@ class SeaDexArr:
 
         # Start by looking through our base case, which are the Kometa
         # Anime IDs. Save these to a dict where the key is the AniList ID
-        anilist_mappings = self.get_mappings_from_anime_mappings(
-            tvdb_id=tvdb_id,
-            tmdb_id=tmdb_id,
-            imdb_id=imdb_id,
-            tmdb_type=tmdb_type,
-            anilist_mappings=anilist_mappings,
-        )
+        if self.anime_mappings:
+            anilist_mappings = self.get_mappings_from_anime_mappings(
+                tvdb_id=tvdb_id,
+                tmdb_id=tmdb_id,
+                imdb_id=imdb_id,
+                tmdb_type=tmdb_type,
+                anilist_mappings=anilist_mappings,
+            )
 
         # Then, look through the AniBridge mappings
-        anilist_mappings = self.get_mappings_from_anibridge_mappings(
-            tvdb_id=tvdb_id,
-            tmdb_id=tmdb_id,
-            imdb_id=imdb_id,
-            tmdb_type=tmdb_type,
-            anilist_mappings=anilist_mappings,
-        )
+        if self.anibridge_mappings:
+            anilist_mappings = self.get_mappings_from_anibridge_mappings(
+                tvdb_id=tvdb_id,
+                tmdb_id=tmdb_id,
+                imdb_id=imdb_id,
+                tmdb_type=tmdb_type,
+                anilist_mappings=anilist_mappings,
+            )
 
         # Sort by AniList ID
         anilist_mappings = dict(sorted(anilist_mappings.items()))

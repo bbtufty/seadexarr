@@ -312,6 +312,9 @@ class SeaDexRadarr(SeaDexArr):
             self.anime_mappings,
             self.anibridge_mappings,
         ]:
+            if not mapping:
+                continue
+
             all_tmdb_ids.extend(
                 mapping[x].get("tmdb_movie_id", None)
                 for x in mapping
