@@ -62,7 +62,7 @@ docs = [
 [build-system]
 requires = [
     "setuptools == 80.9.0",
-    "wheel == 0.45.1",
+    "wheel == 0.46.3",
     "setuptools_scm == 9.2.2",
 ]
 
