@@ -1,4 +1,3 @@
-import copy
 import time
 import os
 from urllib.parse import urlencode
@@ -9,7 +8,6 @@ from arrapi import SonarrAPI
 
 from .anilist import (
     get_anilist_n_eps,
-    get_anilist_format,
 )
 from .discord import discord_push
 from .log import centred_string, left_aligned_string
@@ -175,7 +173,8 @@ def check_ep_by_anibridge(
                 if len(episode_split_start_end) == 1:
                     episode_split_end = 9999
                 else:
-                    episode_split_end = int(episode_split_start_end[1].strip("e"))
+                    end_str = episode_split_start_end[1].strip("e")
+                    episode_split_end = 9999 if not end_str else int(end_str)
 
                 if episode_split_start <= ep_episode <= episode_split_end:
                     return True
@@ -596,39 +595,20 @@ class SeaDexSonarr(SeaDexArr):
 
         sonarr_series = []
 
-        all_tvdb_ids = []
-        all_imdb_ids = []
-
-        # Search through TVDB and IMDb IDs via Anime IDs and AniBridge mappings
-        for mapping in [
-            self.anime_mappings,
-            self.anibridge_mappings,
-        ]:
-            if not mapping:
-                continue
-
-            all_tvdb_ids.extend(
-                mapping[x].get("tvdb_id", None)
-                for x in mapping
-                if "tvdb_id" in mapping[x].keys()
-            )
-
-            all_imdb_ids.extend(
-                mapping[x].get("imdb_id", None)
-                for x in mapping
-                if "imdb_id" in mapping[x].keys()
-            )
+        all_tvdb_ids = list(self._v3_index["tvdb_show"].keys())
+        all_imdb_ids = list(self._v3_index["imdb_movie"].keys())
 
         for s in self.sonarr.all_series():
+            # Skip series if "seadexarr_ignore" tag is applied in Sonarr
+            ignore_series = any(t.label == 'seadexarr-ignore' for t in s.tags)
+            if ignore_series:
+                self.logger.debug(f"Ignoring series: {s.title}")
+                continue
 
-            # Check by TVDB IDs
-            tvdb_id = s.tvdbId
-            if tvdb_id in all_tvdb_ids and s not in sonarr_series:
+            if s.tvdbId in all_tvdb_ids and s not in sonarr_series:
                 sonarr_series.append(s)
 
-            # Check by IMDb IDs
-            imdb_id = s.imdbId
-            if imdb_id in all_imdb_ids and s not in sonarr_series:
+            if s.imdbId in all_imdb_ids and s not in sonarr_series:
                 sonarr_series.append(s)
 
         sonarr_series.sort(key=lambda x: x.title)
@@ -670,11 +650,8 @@ class SeaDexSonarr(SeaDexArr):
         if al_id == -1:
             raise ValueError("AniList ID not defined!")
 
-        # Get the AniDB ID
-        anidb_id = mapping.get("anidb_id", None)
-
         # Check what kind of mode we're in here,
-        # it's either AniBridge or Anime IDs
+        # it's either AniBridge (v3) or legacy Anime IDs
         if "tvdb_mappings" in mapping:
             mapping_mode = "anibridge"
         else:
@@ -725,112 +702,24 @@ class SeaDexSonarr(SeaDexArr):
             if include_episode:
                 final_ep_list.append(ep)
 
-        # For OVAs and movies, the offsets can often be wrong, so if we have specific mappings
-        # then take that into account here
-        al_format, self.al_cache = get_anilist_format(
-            al_id,
-            al_cache=self.al_cache,
-        )
-
-        # Potentially pull out a bunch of mappings from AniDB. These should
-        # be for anything not marked as TV, and specials as marked by
-        # being in Season 0
-        anidb_mapping_dict = {}
-        if (
-            self.anidb_mappings is not None
-            and anidb_id is not None
-            and (al_format not in ["TV"] or tvdb_season == 0)
-        ):
-            anidb_item = self.anidb_mappings.findall(
-                f"anime[@anidbid='{anidb_id}']"
+        # v3 mappings always use "anibridge" mode (precise episode specs); the
+        # "anime_ids" offset path is retained as a fallback for any custom mappings.
+        if mapping_mode == "anime_ids":
+            ep_offset = mapping.get("tvdb_epoffset", 0)
+            n_eps, self.al_cache = get_anilist_n_eps(
+                al_id,
+                al_cache=self.al_cache,
             )
-
-            # If we don't find anything, no worries. If we find multiple, worries
-            if len(anidb_item) > 1:
-                raise ValueError(
-                    "Multiple AniDB mappings found. This should not happen!"
-                )
-
-            if len(anidb_item) == 1:
-                anidb_item = anidb_item[0]
-
-                # We want things with mapping lists in, since more regular
-                # mappings will have already been picked up
-                anidb_mapping_list = anidb_item.findall("mapping-list")
-
-                if len(anidb_mapping_list) > 0:
-                    for ms in anidb_mapping_list:
-                        m = ms.findall("mapping")
-                        for i in m:
-
-                            # If there's no text, continue
-                            if not i.text:
-                                continue
-
-                            # Split at semicolons
-                            i_split = i.text.strip(";").split(";")
-                            i_split = [x.split("-") for x in i_split]
-
-                            # Only match things if AniList and AniDB agree on the TVDB season
-                            anidb_tvdbseason = int(i.attrib["tvdbseason"])
-                            if not anidb_tvdbseason == tvdb_season:
-                                continue
-
-                            anidb_mapping_dict[anidb_tvdbseason] = {
-                                int(x[1]): int(x[0]) for x in i_split
-                            }
-
-        # Prefer the AniDB mapping dict over any offsets
-        if len(anidb_mapping_dict) > 0:
-            anidb_final_ep_list = []
-
-            # See if we have the mapping for each entry
-            for ep in final_ep_list:
-
-                season_number = ep.get("seasonNumber", None)
-                episode_number = ep.get("episodeNumber", None)
-
-                anidb_mapping_dict_entry = anidb_mapping_dict.get(
-                    season_number, {}
-                ).get(episode_number, None)
-                if anidb_mapping_dict_entry is not None:
-                    anidb_final_ep_list.append(ep)
-
-            final_ep_list = copy.deepcopy(anidb_final_ep_list)
-
-        else:
-
-            # First case, we've got Anime IDs
-            if mapping_mode == "anime_ids":
-
-                # Slice the list to get the correct episodes, so any potential offsets
-                ep_offset = mapping.get("tvdb_epoffset", 0)
-                n_eps, self.al_cache = get_anilist_n_eps(
-                    al_id,
-                    al_cache=self.al_cache,
-                )
-
-                # If we don't get a number of episodes, use them all
-                if n_eps is None:
-                    n_eps = len(final_ep_list) - ep_offset
-
-                # Check that we're including this by the episode number. This only
-                # works for single-seasons, so be careful!
-                if tvdb_season != -1:
-                    final_ep_list = [
-                        ep
-                        for ep in final_ep_list
-                        if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
-                    ]
-                else:
-                    final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
-
-            # Or, we've got AniBridge mappings so we don't need to do anything (hooray)
-            elif mapping_mode == "anibridge":
-                pass
-
+            if n_eps is None:
+                n_eps = len(final_ep_list) - ep_offset
+            if tvdb_season != -1:
+                final_ep_list = [
+                    ep
+                    for ep in final_ep_list
+                    if 1 <= ep.get("episodeNumber", None) - ep_offset <= n_eps
+                ]
             else:
-                raise ValueError(f"Invalid mapping mode {mapping_mode}")
+                final_ep_list = final_ep_list[ep_offset : n_eps + ep_offset]
 
         return final_ep_list
 

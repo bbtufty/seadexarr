@@ -37,9 +37,11 @@ dependencies = [
     "discordwebhook == 1.0.3",
     "httpx == 0.28.1",
     "pynyaa == 3.0.0",
+    "pydantic >= 2.0",
     "PyYAML == 6.0.3",
     "qbittorrent-api == 2025.11.1",
     "requests == 2.32.5",
+    "requests-ratelimiter == 0.9.2",
     "ruamel.yaml == 0.19.1",
     "seadex == 0.7.2",
     "typer == 0.21.1"
@@ -67,3 +69,6 @@ requires = [
 ]
 
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["seadexarr*"]
