@@ -205,6 +205,7 @@ description of each is given below.
 - `anibridge_v3_mappings`: Can provide custom AniBridge mappings here. Otherwise, will use the PlexAniBridge mappings.
   Set to False to disable AniBridge mappings entirely. The general user should not set this. Defaults to None
 - `log_level`: Controls the level of logging. Can be WARNING, INFO, or DEBUG. Defaults to "INFO"
+- `nyaa_host`: Configures an alternative hostname to use when connecting to nyaa. Defaults to "nyaa.si"
 
 ## Roadmap
 

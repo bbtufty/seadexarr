@@ -1,6 +1,6 @@
 from urllib.parse import urljoin, urlencode
 
-import pynyaa
+from pynyaa import Nyaa
 import requests
 from bs4 import BeautifulSoup
 
@@ -8,14 +8,16 @@ ANIMETOSHO_FEED_URL = "https://animetosho.org/feed/json"
 RUTRACKER_MAGNET_ANNOUNCE = "http://bt2.t-ru.org/ann?magnet"
 
 
-def get_nyaa_url(url):
+def get_nyaa_url(url, host):
     """Get Nyaa torrent link from URL
 
     Args:
         url (str): URL to get Nyaa torrent link
+        host (str): Hostname used for Nyaa
     """
 
-    parsed_url = pynyaa.get(url).torrent.url
+    with Nyaa(base_url = f"https://{host}/") as nyaa:
+        parsed_url = nyaa.get(url).torrent.url
 
     return parsed_url
 

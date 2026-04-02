@@ -265,6 +265,9 @@ class SeaDexArr:
         else:
             self.logger = logger
 
+        # Set nyaa.si host
+        self.nyaa_host = self.config.get("nyaa_host", "nyaa.si")
+
         # Instantiate the SeaDex API
         self.seadex = SeaDexEntry()
 
@@ -1291,7 +1294,7 @@ class SeaDexArr:
 
                 # Nyaa
                 if tracker.lower() == "nyaa":
-                    parsed_url = get_nyaa_url(url=url)
+                    parsed_url = get_nyaa_url(url=url, host=self.nyaa_host)
 
                 # AnimeTosho
                 elif tracker.lower() == "animetosho":
