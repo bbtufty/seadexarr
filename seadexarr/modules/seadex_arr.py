@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import shutil
+import time
 from datetime import datetime
 from hashlib import md5
 from itertools import compress
@@ -1452,10 +1453,14 @@ class SeaDexArr:
             category=self.torrent_category,
             tags=self.torrent_tags,
         )
-        if result != "Ok.":
-            raise Exception("Failed to add torrent")
 
-        return "torrent_added"
+        for _ in range(5):
+            torr_info = self.qbit.torrents_info(torrent_hashes=torrent_hash)
+            if any(i.hash == torrent_hash for i in torr_info):
+                return "torrent_added"
+            time.sleep(1)
+
+        raise Exception(f"Failed to add torrent: {url}")
 
     def update_cache(self, arr, al_id, cache_details=None):
         """Update cache with useful info
