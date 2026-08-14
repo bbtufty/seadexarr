@@ -19,8 +19,9 @@ from .anibridge_model import AnibridgeMappings
 from .anilist import get_anilist_title, get_anilist_thumb
 from .log import setup_logger, centred_string, left_aligned_string
 from .torrent import (
-    get_nyaa_url,
+    get_animebytes_url,
     get_animetosho_url,
+    get_nyaa_url,
     get_rutracker_url,
 )
 
@@ -56,7 +57,9 @@ def save_json(
         )
 
 
-ANIBRIDGE_V3_MAPPINGS_URL = "https://github.com/anibridge/anibridge-mappings/releases/download/v3/mappings.json"
+ANIBRIDGE_V3_MAPPINGS_URL = (
+    "https://github.com/anibridge/anibridge-mappings/releases/download/v3/mappings.json"
+)
 
 ALLOWED_ARRS = [
     "radarr",
@@ -241,6 +244,13 @@ class SeaDexArr:
 
         self.trackers = [t.lower() for t in trackers]
 
+        # Check all the requested trackers are in the supported list
+        all_trackers = PUBLIC_TRACKERS + PRIVATE_TRACKERS
+        all_trackers_lower = [t.lower() for t in all_trackers]
+        for tracker in self.trackers:
+            if tracker not in all_trackers_lower:
+                raise ValueError(f"Tracker {tracker} not supported")
+
         # Advanced settings
         self.sleep_time = self.config.get("sleep_time", 2)
         self.cache_time = self.config.get("cache_time", 1)
@@ -265,6 +275,9 @@ class SeaDexArr:
                 self.logger = setup_logger(log_level=log_level)
         else:
             self.logger = logger
+
+        # Set AB passkey
+        self.ab_passkey = self.config.get("ab_passkey", "")
 
         # Set nyaa.si host
         self.nyaa_host = self.config.get("nyaa_host", "nyaa.si")
@@ -409,7 +422,9 @@ class SeaDexArr:
                 except ValueError:
                     continue
 
-                season_entry = index["tvdb_show"].setdefault(tvdb_id, {}).setdefault(season, {})
+                season_entry = (
+                    index["tvdb_show"].setdefault(tvdb_id, {}).setdefault(season, {})
+                )
 
                 for target_key, ep_map in targets.items():
                     t_parts = target_key.split(":")
@@ -587,7 +602,9 @@ class SeaDexArr:
         anilist_mappings = {}
 
         if tvdb_id is not None:
-            for season, season_entries in self._v3_index["tvdb_show"].get(tvdb_id, {}).items():
+            for season, season_entries in (
+                self._v3_index["tvdb_show"].get(tvdb_id, {}).items()
+            ):
                 for anilist_id, ep_spec in season_entries.items():
                     mapping = {
                         "tvdb_id": tvdb_id,
@@ -599,7 +616,9 @@ class SeaDexArr:
 
                     if anilist_id in anilist_mappings:
                         # Same AniList entry spans multiple TVDB seasons – merge mappings
-                        anilist_mappings[anilist_id]["tvdb_mappings"].update(mapping["tvdb_mappings"])
+                        anilist_mappings[anilist_id]["tvdb_mappings"].update(
+                            mapping["tvdb_mappings"]
+                        )
                     else:
                         anilist_mappings[anilist_id] = mapping
 
@@ -658,7 +677,9 @@ class SeaDexArr:
 
         # Filter out any tags
         final_torrent_list = [
-            t  for t in final_torrent_list if len(set(self.ignore_tags).intersection(set(t.tags))) == 0
+            t
+            for t in final_torrent_list
+            if len(set(self.ignore_tags).intersection(set(t.tags))) == 0
         ]
 
         # Filter down by allowed trackers
@@ -701,9 +722,31 @@ class SeaDexArr:
         seadex_release_groups = {}
         for t in candidates:
 
+            # If we have the same release group on multiple trackers,
+            # then take the highest one in the priority list and wipe
+            # out the other
+            if t.release_group in seadex_release_groups:
+
+                sdrg_tracker = seadex_release_groups[t.release_group]["tracker"]
+
+                if t.tracker != sdrg_tracker:
+
+                    candidate_tracker_priority = self.trackers.index(t.tracker.lower())
+                    existing_tracker_priority = self.trackers.index(
+                        sdrg_tracker.lower()
+                    )
+
+                    # If the candidate tracker has higher priority, take that. Else skip this
+                    # candidate
+                    if candidate_tracker_priority < existing_tracker_priority:
+                        seadex_release_groups.pop(t.release_group)
+                    else:
+                        continue
+
             if t.release_group not in seadex_release_groups:
                 seadex_release_groups[t.release_group] = {"urls": {}}
                 seadex_release_groups[t.release_group]["tags"] = t.tags
+                seadex_release_groups[t.release_group]["tracker"] = t.tracker
 
             seadex_release_groups[t.release_group]["urls"][t.url] = {
                 "url": t.url,
@@ -1293,13 +1336,27 @@ class SeaDexArr:
                     )
                     continue
 
-                # Nyaa
-                if tracker.lower() == "nyaa":
-                    parsed_url = get_nyaa_url(url=url, host=self.nyaa_host)
+                # AnimeBytes
+                if tracker.lower() == "ab":
+
+                    # Check that passkey has been supplied
+                    if self.ab_passkey == "":
+                        raise ValueError(
+                            "ab_passkey should be defined in config, if downloading from AB"
+                        )
+
+                    parsed_url = get_animebytes_url(
+                        url=url,
+                        passkey=self.ab_passkey,
+                    )
 
                 # AnimeTosho
                 elif tracker.lower() == "animetosho":
                     parsed_url = get_animetosho_url(url=url)
+
+                # Nyaa
+                elif tracker.lower() == "nyaa":
+                    parsed_url = get_nyaa_url(url=url, host=self.nyaa_host)
 
                 # RuTracker
                 elif tracker.lower() == "rutracker":
