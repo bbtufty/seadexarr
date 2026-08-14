@@ -304,31 +304,16 @@ class SeaDexRadarr(SeaDexArr):
 
         radarr_movies = []
 
-        all_tmdb_ids = []
-        all_imdb_ids = []
-
-        # Search through TMDB and IMDb IDs via Anime IDs and AniBridge mappings
-        for mapping in [
-            self.anime_mappings,
-            self.anibridge_mappings,
-        ]:
-            if not mapping:
-                continue
-
-            all_tmdb_ids.extend(
-                mapping[x].get("tmdb_movie_id", None)
-                for x in mapping
-                if "tmdb_movie_id" in mapping[x].keys()
-            )
-
-            all_imdb_ids.extend(
-                mapping[x].get("imdb_id", None)
-                for x in mapping
-                if "imdb_id" in mapping[x].keys()
-            )
+        all_tmdb_ids = list(self._v3_index["tmdb_movie"].keys())
+        all_imdb_ids = list(self._v3_index["imdb_movie"].keys())
 
         for m in self.radarr.all_movies():
-
+            # Skip series if "seadexarr_ignore" tag is applied in Sonarr
+            ignore_series = any(t.label == 'seadexarr-ignore' for t in m.tags)
+            if ignore_series:
+                self.logger.debug(f"Ignoring movie: {m.title}")
+                continue
+            
             # Check by TMDB IDs
             tmdb_id = m.tmdbId
             if tmdb_id in all_tmdb_ids and m not in radarr_movies:

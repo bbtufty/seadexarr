@@ -1,6 +1,9 @@
 import copy
-
 import requests
+import time
+
+from requests_ratelimiter import LimiterSession
+session = LimiterSession(per_minute=15, per_second=0.5)  # max 15 requests/min, 1 req/2sec
 
 API_URL = "https://graphql.anilist.co"
 
@@ -35,10 +38,25 @@ def get_query(al_id):
     # Define query variables and values that will be used in the query request
     variables = {"id": al_id}
 
-    resp = requests.post(API_URL, json={"query": QUERY, "variables": variables})
-    j = resp.json()
+    # Attempt query up to 5 times, if rate limit is exceeded
+    for i in range(5):
+        try:
+            resp = session.post(API_URL, json={"query": QUERY, "variables": variables})
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.HTTPError as e:
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", 60))
+                print(f"Rate limit exceeded on attempt #{i+1}/5. Retrying in {retry_after}s.")
+                time.sleep(retry_after + 1)
+            else:
+                print(f"An HTTP error occurred: {e}")
+                break
+        except requests.exceptions.RequestException as e:
+            print(f"A general error occurred: {e}")
+            break
 
-    return j
+    return resp.json()
 
 
 def get_anilist_n_eps(
