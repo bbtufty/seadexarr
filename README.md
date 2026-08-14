@@ -158,6 +158,10 @@ description of each is given below.
 - `max_torrents_to_add`: used to limit the number of torrents you add in one run. Defaults to None, which 
    will just add everything it finds
 
+### Private tracker settings
+
+- `ab_passkey` AnimeBytes passkey. Can be found in profile → account.
+
 ### Discord settings
 
 - `discord_url`: If you want to use Discord notifications (recommended), then set up a webhook following 
@@ -183,7 +187,7 @@ description of each is given below.
     - AniDex
     - RuTracker (supported)
   - Private trackers
-    - AB
+    - AB (supported)
     - BeyondHD
     - PassThePopcorn
     - HDBits

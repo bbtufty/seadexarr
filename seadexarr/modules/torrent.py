@@ -1,23 +1,33 @@
+import re
 from urllib.parse import urljoin, urlencode
 
 from pynyaa import Nyaa
 import requests
 from bs4 import BeautifulSoup
 
+AB_URL = "https://animebytes.tv/torrent"
 ANIMETOSHO_FEED_URL = "https://animetosho.org/feed/json"
 RUTRACKER_MAGNET_ANNOUNCE = "http://bt2.t-ru.org/ann?magnet"
 
 
-def get_nyaa_url(url, host):
-    """Get Nyaa torrent link from URL
+def get_animebytes_url(
+    url: str,
+    passkey: str,
+):
+    """Get AnimeBytes torrent link from URL
 
     Args:
-        url (str): URL to get Nyaa torrent link
-        host (str): Hostname used for Nyaa
+        url (str): URL to get AnimeBytes torrent link
+        passkey (str): Passkey for AnimeBytes. Find this on your profile
     """
 
-    with Nyaa(base_url = f"https://{host}/") as nyaa:
-        parsed_url = nyaa.get(url).torrent.url
+    torrent_id = re.findall(r"torrentid=(\d+)", url)
+
+    if len(torrent_id) != 1:
+        raise Exception(f"Could not parse torrent ID from URL {url}")
+    torrent_id = torrent_id[0]
+
+    parsed_url = f"{AB_URL}/{torrent_id}/download/{passkey}"
 
     return parsed_url
 
@@ -57,6 +67,20 @@ def get_animetosho_url(url):
         link = i.get("link", None)
         if link == url:
             parsed_url = i.get("torrent_url", None)
+
+    return parsed_url
+
+
+def get_nyaa_url(url, host):
+    """Get Nyaa torrent link from URL
+
+    Args:
+        url (str): URL to get Nyaa torrent link
+        host (str): Hostname used for Nyaa
+    """
+
+    with Nyaa(base_url=f"https://{host}/") as nyaa:
+        parsed_url = nyaa.get(url).torrent.url
 
     return parsed_url
 

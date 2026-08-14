@@ -20,6 +20,9 @@ sonarr_torrent_category:
 radarr_torrent_category:
 torrent_tags:
 
+# Keys for private trackers
+ab_passkey: # AnimeBytes passkey
+
 # Ignore SeaDex update times?
 ignore_seadex_update_times: false
 
