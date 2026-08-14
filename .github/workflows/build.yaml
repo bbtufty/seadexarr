@@ -17,7 +17,7 @@ jobs:
         with:
           submodules: true
       - name: Setup Python versions
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: |
             3.11
