@@ -5,6 +5,7 @@ import shutil
 from datetime import datetime
 from hashlib import md5
 from itertools import compress
+from qbittorrentapi.torrents import TorrentsAddedMetadata
 from urllib.request import urlretrieve
 
 import httpx
@@ -1386,6 +1387,13 @@ class SeaDexArr:
             category=self.torrent_category,
             tags=self.torrent_tags,
         )
+
+        # If we get TorrentsAddedMetadata back, then just check nothing has
+        # explicitly failed
+        if isinstance(result, TorrentsAddedMetadata):
+            if result["failure_count"] == 0:
+                result = "Ok."
+
         if result != "Ok.":
             raise Exception("Failed to add torrent")
 
