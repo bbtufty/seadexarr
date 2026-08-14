@@ -45,3 +45,4 @@ cache_time: 1
 interactive: false
 anibridge_v3_mappings:
 log_level: "INFO"
+nyaa_host: "nyaa.si" # Choose between nyaa.si proxies
