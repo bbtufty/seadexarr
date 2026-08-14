@@ -1,6 +1,10 @@
-1.0.0 (Unreleased)
+1.0.0 (2026-08-14)
 ==================
 
+- Add support for AB
+- Make nyaa host configurable
+- Migrate to new AniBridge
+- Preserve best releases on non-dual audio
 - Add "torrent_tags", which allows you to tag torrents as added to qBittorrent
 - Add "ignore tags" option, which allows you to filter out various tags
 - Use AniBridge mappings to mop up missed Sonarr/Radarr titles
