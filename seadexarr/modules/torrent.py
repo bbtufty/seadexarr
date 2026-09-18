@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urljoin, urlencode
+from urllib.parse import quote, urljoin, urlencode
 
 from pynyaa import Nyaa
 import requests
@@ -42,31 +42,19 @@ def get_animetosho_url(url):
     # Start by getting the webpage, so we can get a title
     r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
-    titles = soup.find_all("h2", attrs={"id": "title"})
+    links = soup.find_all("a", href=True)
 
-    if len(titles) == 0:
-        raise Exception("Could not find torrent name in AnimeTosho webpage")
+    parsed_url = []
+    for link in links:
+        if link["href"].startswith("magnet:"):
+            parsed_url.append(link["href"])
 
-    if len(titles) > 1:
-        raise Exception("More than one torrent title in AnimeTosho webpage")
+    if len(parsed_url) == 0:
+        raise Exception("Failed to find magnet link")
+    elif len(parsed_url) > 1:
+        raise Exception("More than one magnet link in AnimeToSho webpage")
 
-    title = titles[0].text
-
-    # Fantastic, we have a title. Now query API
-    query_url = urljoin(ANIMETOSHO_FEED_URL, f"?t=search&q={title}")
-    r = requests.get(query_url)
-    j = r.json()
-
-    # Loop over, make sure the link matches the URL and get a torrent link out
-    parsed_url = None
-    for i in j:
-
-        if parsed_url is not None:
-            continue
-
-        link = i.get("link", None)
-        if link == url:
-            parsed_url = i.get("torrent_url", None)
+    parsed_url = parsed_url[0]
 
     return parsed_url
 
