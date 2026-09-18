@@ -999,8 +999,9 @@ class SeaDexArr:
                 url_hash = url_item.get("hash", None)
 
                 # If the URL is already in the hash cache, then append but don't set to download
+                # Note that some releases don't return a hash, in which case we should check for sure
                 torrent_hashes.append(url_hash)
-                if url_hash not in cached_hashes:
+                if url_hash not in cached_hashes or url_hash is None:
                     self.logger.debug(
                         left_aligned_string(
                             f"Torrent hash {url_hash} not found in cache. "
@@ -1014,7 +1015,7 @@ class SeaDexArr:
                 else:
                     self.logger.debug(
                         left_aligned_string(
-                            f"Torrent hash {url_hash} in cache. " f"Will skip download",
+                            f"Torrent hash {url_hash} in cache. Will skip download",
                             total_length=self.log_line_length,
                         )
                     )
