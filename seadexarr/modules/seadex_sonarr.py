@@ -219,6 +219,8 @@ class SeaDexSonarr(SeaDexArr):
         if not self.sonarr_api_key:
             raise ValueError(f"sonarr_api_key needs to be defined in {config}")
 
+        self.sonarr_tag = self.config.get("sonarr_tag", None)
+
         self.sonarr = SonarrAPI(
             url=self.sonarr_url,
             apikey=self.sonarr_api_key,
@@ -286,6 +288,11 @@ class SeaDexSonarr(SeaDexArr):
                 if len(al_mappings) == 0:
                     self.log_no_anilist_mappings(title=sonarr_title)
                     continue
+
+                # Tag in Sonarr
+                if self.sonarr_tag is not None:
+                    if not self.sonarr_tag in sonarr_series.tags:
+                        sonarr_series.edit(tags=self.sonarr_tag)
 
                 for al_id, mapping in al_mappings.items():
 
