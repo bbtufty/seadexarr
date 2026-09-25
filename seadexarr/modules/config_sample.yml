@@ -4,10 +4,16 @@ sonarr_api_key:
 sonarr_ignore_unmonitored: false  # If True, will not grab releases that are unmonitored in Sonarr
 ignore_movies_in_radarr: false  # If True, will not add movies to Sonarr that already exist in Radarr
 
+# Add an optional tag to Seadexarr-covered Sonarr releases
+sonarr_tag:
+
 # Parameters for Radarr
 radarr_url:
 radarr_api_key:
 radarr_ignore_unmonitored: false  # If True, will not grab releases that are unmonitored in Radarr
+
+# Add an optional tag to Seadexarr-covered Radarr releases
+radarr_tag:
 
 # qBittorrent parameters
 qbit_info:

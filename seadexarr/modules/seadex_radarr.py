@@ -45,6 +45,8 @@ class SeaDexRadarr(SeaDexArr):
         if not self.radarr_api_key:
             raise ValueError(f"radarr_api_key needs to be defined in {config}")
 
+        self.radarr_tag = self.config.get("radarr_tag", None)
+
         self.radarr = RadarrAPI(
             url=self.radarr_url,
             apikey=self.radarr_api_key,
@@ -98,6 +100,11 @@ class SeaDexRadarr(SeaDexArr):
                 if len(al_mappings) == 0:
                     self.log_no_anilist_mappings(title=radarr_title)
                     continue
+
+                # Tag in Radarr
+                if self.radarr_tag is not None:
+                    if not self.radarr_tag in radarr_movie.tags:
+                        radarr_movie.edit(tags=self.radarr_tag)
 
                 for al_id, mapping in al_mappings.items():
 
