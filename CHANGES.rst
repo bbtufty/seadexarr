@@ -1,6 +1,7 @@
 1.2.0 (Unreleased)
 ==================
 
+- Add option to disable filesize check
 - Add option to add torrents in paused state
 
 1.1.0 (2026-10-16)

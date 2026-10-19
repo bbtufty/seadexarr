@@ -35,6 +35,9 @@ ab_passkey: # AnimeBytes passkey
 # Ignore SeaDex update times?
 ignore_seadex_update_times: false
 
+# Perform a check against filesize?
+check_filesize: true
+
 # Do you want to filter purely by torrent hash?
 use_torrent_hash_to_filter: false
 

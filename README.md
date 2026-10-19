@@ -199,6 +199,8 @@ description of each is given below.
 
 - `ignore_seadex_update_times`: If True, will not check against the update times in the cache to
   decide whether to search for a release. Defaults to False
+- `check_filesize`: If True, will check existing files against matched filesizes from the torrent.
+  Defaults to True
 - `use_torrent_hash_to_filter`: Can either try and filter by release groups in Sonarr/Radarr (False),
   or by torrent hashes in the cache (True). Defaults to False. See a more detailed description above
 - `sleep_time`: To avoid hitting API rate limits, after each query SeaDexArr will wait a number 
