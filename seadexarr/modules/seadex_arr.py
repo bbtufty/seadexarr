@@ -213,6 +213,10 @@ class SeaDexArr:
             "ignore_seadex_update_times", False
         )
 
+        self.check_filesize = self.config.get(
+            "check_filesize", True
+        )
+
         self.use_torrent_hash_to_filter = self.config.get(
             "use_torrent_hash_to_filter", False
         )
@@ -1100,8 +1104,8 @@ class SeaDexArr:
                         url_item.update({"download": True})
                         torrent_hashes.append(url_hash)
 
-                    # Else, if we match then double-check against the size
-                    if seadex_rg in arr_release_groups:
+                    # Else, if we match then double-check against the size, if this is selected
+                    if seadex_rg in arr_release_groups and self.check_filesize:
 
                         # Be a blunt hammer and just check intersections
                         seadex_file_sizes = url_item.get("size", [])
