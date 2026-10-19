@@ -206,6 +206,9 @@ class SeaDexArr:
 
             self.qbit = qbit
 
+        # Adding torrents paused?
+        self.add_paused = self.config.get("add_paused", False)
+
         self.ignore_seadex_update_times = self.config.get(
             "ignore_seadex_update_times", False
         )
@@ -1444,6 +1447,7 @@ class SeaDexArr:
             urls=torrent_url,
             category=self.torrent_category,
             tags=self.torrent_tags,
+            is_paused=self.add_paused,
         )
 
         # If we get TorrentsAddedMetadata back, then just check nothing has
