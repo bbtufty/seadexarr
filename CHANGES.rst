@@ -1,6 +1,7 @@
 1.2.0 (Unreleased)
 ==================
 
+- Add "ignore_empty" option, which allows you to ignore series/movies that don't already have something downloaded
 - Add option to disable filesize check
 - Add option to add torrents in paused state
 

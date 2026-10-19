@@ -142,9 +142,13 @@ description of each is given below.
 - `sonarr_api_key`: API key for Sonarr (Settings/General/API Key). Required if running SeaDexSonarr
 - `ignore_movies_in_radarr`: If True, will not add releases found in Sonarr (movie specials) if they already
   exist as movies in Radarr. Defaults to False
+- `sonarr_ignore_empty`: If True, will skip releases where the overall show has nothing downloaded. 
+  Defaults to False
 
 - `radarr_url`: URL for Radarr. Required if running SeaDexRadarr
 - `radarr_api_key`: API key for Radarr (Settings/General/API Key). Required if running SeaDexRadarr
+- `radarr_ignore_empty`: If True, will skip releases where the doesn't already have something downlaoded. 
+  Defaults to False
 
 ### Torrent settings
 

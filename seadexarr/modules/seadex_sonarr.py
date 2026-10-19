@@ -606,10 +606,16 @@ class SeaDexSonarr(SeaDexArr):
         all_imdb_ids = list(self._v3_index["imdb_movie"].keys())
 
         for s in self.sonarr.all_series():
+            
             # Skip series if "seadexarr_ignore" tag is applied in Sonarr
             ignore_series = any(t.label == 'seadexarr-ignore' for t in s.tags)
             if ignore_series:
-                self.logger.debug(f"Ignoring series: {s.title}")
+                self.logger.debug(f"Ignoring series because tagged seadexarr-ignore: {s.title}")
+                continue
+
+            # If we have nothing and we're ignoring empty series, skip
+            if s.sizeOnDisk == 0 and self.ignore_empty:
+                self.logger.debug(f"Ignoring series because ignore_empty is True: {s.title}")
                 continue
 
             if s.tvdbId in all_tvdb_ids and s not in sonarr_series:
