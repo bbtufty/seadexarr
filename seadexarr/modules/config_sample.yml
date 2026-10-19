@@ -21,6 +21,9 @@ qbit_info:
   username:
   password:
 
+# Add torrents in a paused state?
+add_paused: false
+
 # Categories for added torrents
 sonarr_torrent_category:
 radarr_torrent_category:

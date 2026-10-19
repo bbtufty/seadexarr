@@ -150,6 +150,7 @@ description of each is given below.
 
 - `qbit_info`: Details for qBittorrent. This requires a host URL, username, and password to be set. 
    Required if using qBittorrent
+- `add_paused`: If True, will add torrents to qBittorrent in a paused state. Defaults to False
 - `sonarr_torrent_category`: Sonarr torrent import category, if you have one. Defaults to None, which won't 
    set a category
 - `radarr_torrent_category`: Radarr torrent import category, if you have one. Defaults to None, which won't 
