@@ -44,7 +44,7 @@ dependencies = [
     "requests-ratelimiter == 0.10.0",
     "ruamel.yaml == 0.19.1",
     "seadex == 0.7.3",
-    "typer == 0.27.3"
+    "typer == 0.28.0"
 ]
 
 [project.scripts]
